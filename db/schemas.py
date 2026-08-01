@@ -89,15 +89,19 @@ CREATE TABLE IF NOT EXISTS page_images
 );"""
 
 PAGE_ALIASES_TABLE = """
-CREATE TABLE IF NOT EXISTS page_aliases
+CREATE TABLE page_aliases
 (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    page_id         INTEGER NOT NULL,
+    page_id INTEGER NOT NULL,
 
-    alias           TEXT NOT NULL,
+    alias TEXT NOT NULL COLLATE NOCASE,
 
-    FOREIGN KEY(page_id) REFERENCES pages(id) ON DELETE CASCADE
+    UNIQUE(alias),
+
+    FOREIGN KEY(page_id)
+        REFERENCES pages(id)
+        ON DELETE CASCADE
 );
 """
 

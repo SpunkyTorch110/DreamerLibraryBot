@@ -1,0 +1,220 @@
+import aiosqlite
+
+from db.repositories.base_repository import BaseRepository
+from datetime import datetime
+
+from models.schema.player import Player
+
+class PlayerRepository(BaseRepository):
+
+    def _map(self, row: aiosqlite.Row) -> Player:
+        return Player(
+            discord_id=row["discord_id"],
+            username=row["username"],
+            display_name=row["display_name"],
+            gold=row["gold"],
+            last_roll=self.from_database_datetime(row["last_roll"]),
+            last_claim=self.from_database_datetime(row["last_claim"]),
+            created_at=self.from_database_datetime(row["created_at"])
+        )
+
+    async def create(self, player: Player):
+        async with self.database.connection() as db:
+            await db.execute(
+                """
+                INSERT INTO players
+                (discord_id,
+                 username,
+                 display_name,
+                 gold,
+                 last_roll,
+                 last_claim,
+                 created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    player.discord_id,
+                    player.username,
+                    player.display_name,
+                    player.gold,
+                    self.to_database_datetime(player.last_roll),
+                    self.to_database_datetime(player.last_claim),
+                    self.to_database_datetime(player.created_at)
+                )
+            )
+
+    async def get(self, discord_id: int) -> Player | None:
+        row = await self.fetch_one(
+            """
+            SELECT *
+            FROM players
+            WHERE discord_id = ?
+            """,
+            (discord_id,)
+        )
+
+        return None if row is None else self._map(row)
+
+    async def exists(self, discord_id: int) -> bool:
+        return await self.query_exists(
+            """
+            SELECT EXISTS(SELECT 1
+                          FROM players
+                          WHERE discord_id = ?)
+            """,
+            (discord_id,)
+        )
+
+    async def delete(self, discord_id: int):
+        await self.execute(
+            """
+            DELETE
+            FROM players
+            WHERE discord_id = ?
+            """,
+            (discord_id,)
+        )
+
+    async def get_all(self) -> list[Player]:
+        rows = await self.fetch_all(
+            """
+            SELECT *
+            FROM players
+            ORDER BY username
+            """
+        )
+
+        return [self._map(row) for row in rows]
+
+    async def update(self, player: Player):
+        async with self.database.connection() as db:
+            await db.execute(
+                """
+                UPDATE players
+                SET username = ?,
+                    display_name = ?,
+                    gold = ?,
+                    last_roll = ?,
+                    last_claim = ?
+                WHERE discord_id = ?
+                """,
+                (
+                    player.username,
+                    player.display_name,
+                    player.gold,
+                    self.to_database_datetime(player.last_roll),
+                    self.to_database_datetime(player.last_claim),
+                    player.discord_id
+                )
+            )
+
+    async def update_username(
+            self,
+            discord_id: int,
+            username: str
+    ):
+        async with self.database.connection() as db:
+            await db.execute(
+                """
+                UPDATE players
+                SET username = ?
+                WHERE discord_id = ?
+                """,
+                (username, discord_id)
+            )
+
+    async def update_display_name(
+            self,
+            discord_id: int,
+            display_name: str | None
+    ):
+        async with self.database.connection() as db:
+            await db.execute(
+                """
+                UPDATE players
+                SET display_name = ?
+                WHERE discord_id = ?
+                """,
+                (display_name, discord_id)
+            )
+
+    async def set_gold(
+            self,
+            discord_id: int,
+            gold: int
+    ):
+        async with self.database.connection() as db:
+            await db.execute(
+                """
+                UPDATE players
+                SET gold = ?
+                WHERE discord_id = ?
+                """,
+                (gold, discord_id)
+            )
+
+    async def add_gold(
+            self,
+            discord_id: int,
+            amount: int
+    ):
+        async with self.database.connection() as db:
+            await db.execute(
+                """
+                UPDATE players
+                SET gold = gold + ?
+                WHERE discord_id = ?
+                """,
+                (amount, discord_id)
+            )
+
+    async def remove_gold(
+            self,
+            discord_id: int,
+            amount: int
+    ):
+        async with self.database.connection() as db:
+            await db.execute(
+                """
+                UPDATE players
+                SET gold = MAX(0, gold - ?)
+                WHERE discord_id = ?
+                """,
+                (amount, discord_id)
+            )
+
+    async def set_last_roll(
+            self,
+            discord_id: int,
+            timestamp: datetime
+    ):
+        async with self.database.connection() as db:
+            await db.execute(
+                """
+                UPDATE players
+                SET last_roll = ?
+                WHERE discord_id = ?
+                """,
+                (
+                    self.to_database_datetime(timestamp),
+                    discord_id
+                )
+            )
+
+    async def set_last_claim(
+            self,
+            discord_id: int,
+            timestamp: datetime
+    ):
+        async with self.database.connection() as db:
+            await db.execute(
+                """
+                UPDATE players
+                SET last_claim = ?
+                WHERE discord_id = ?
+                """,
+                (
+                    self.to_database_datetime(timestamp),
+                    discord_id
+                )
+            )

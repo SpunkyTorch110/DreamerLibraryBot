@@ -11,3 +11,5 @@ This bot is in development so don't expect much for a while.
 - SQLite Database
 - Discord.py
 - Dotenv
+
+To run the code you should create a .env file with your own discord bot token.
