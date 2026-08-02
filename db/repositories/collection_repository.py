@@ -15,8 +15,8 @@ class CollectionRepository(BaseRepository):
             image_url=row["image_url"]
         )
 
-    async def create(self, collection: Collection):
-        await self.execute(
+    async def create(self, collection: Collection, tx=None) -> Collection:
+        cursor = await self.execute(
             """
             INSERT INTO collections
             (
@@ -30,10 +30,15 @@ class CollectionRepository(BaseRepository):
                 collection.name,
                 collection.description,
                 collection.image_url
-            )
+            ),
+            tx
         )
 
-    async def get(self, collection_id: int) -> Collection | None:
+        collection.id = cursor.lastrowid
+
+        return collection
+
+    async def get(self, collection_id: int, tx=None) -> Collection | None:
 
         row = await self.fetch_one(
             """
@@ -41,12 +46,13 @@ class CollectionRepository(BaseRepository):
             FROM collections
             WHERE id = ?
             """,
-            (collection_id,)
+            (collection_id,),
+            tx
         )
 
         return None if row is None else self._map_row(row)
 
-    async def get_by_name(self, name: str) -> Collection | None:
+    async def get_by_name(self, name: str, tx=None) -> Collection | None:
 
         row = await self.fetch_one(
             """
@@ -54,12 +60,13 @@ class CollectionRepository(BaseRepository):
             FROM collections
             WHERE name = ?
             """,
-            (name,)
+            (name,),
+            tx
         )
 
         return None if row is None else self._map_row(row)
 
-    async def exists(self, collection_id: int) -> bool:
+    async def exists(self, collection_id: int, tx=None) -> bool:
 
         return await self.query_exists(
             """
@@ -69,22 +76,24 @@ class CollectionRepository(BaseRepository):
                 WHERE id = ?
             )
             """,
-            (collection_id,)
+            (collection_id,),
+            tx
         )
 
-    async def get_all(self) -> list[Collection]:
+    async def get_all(self, tx=None) -> list[Collection]:
 
         rows = await self.fetch_all(
             """
             SELECT *
             FROM collections
             ORDER BY name
-            """
+            """,
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
-    async def update(self, collection: Collection):
+    async def update(self, collection: Collection, tx=None):
 
         await self.execute(
             """
@@ -100,10 +109,11 @@ class CollectionRepository(BaseRepository):
                 collection.description,
                 collection.image_url,
                 collection.id
-            )
+            ),
+            tx
         )
 
-    async def delete(self, collection_id: int):
+    async def delete(self, collection_id: int, tx=None):
 
         await self.execute(
             """
@@ -111,17 +121,19 @@ class CollectionRepository(BaseRepository):
             FROM collections
             WHERE id = ?
             """,
-            (collection_id,)
+            (collection_id,),
+            tx
         )
 
-    async def get_page_count(self, collection_id: int) -> int:
+    async def get_page_count(self, collection_id: int, tx=None) -> int:
         row = await self.fetch_one(
             """
             SELECT COUNT(*)
             FROM pages
             WHERE collection_id = ?
             """,
-            (collection_id,)
+            (collection_id,),
+            tx
         )
 
         return row[0]

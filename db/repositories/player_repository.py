@@ -18,9 +18,8 @@ class PlayerRepository(BaseRepository):
             created_at=self.from_database_datetime(row["created_at"])
         )
 
-    async def create(self, player: Player):
-        async with self.database.connection() as db:
-            await db.execute(
+    async def create(self, player: Player, tx=None) -> Player:
+            cursor = await self.execute(
                 """
                 INSERT INTO players
                 (discord_id,
@@ -40,53 +39,63 @@ class PlayerRepository(BaseRepository):
                     self.to_database_datetime(player.last_roll),
                     self.to_database_datetime(player.last_claim),
                     self.to_database_datetime(player.created_at)
-                )
+                ),
+                tx
             )
 
-    async def get(self, discord_id: int) -> Player | None:
+            player.discord_id = cursor.lastrowid
+
+            return player
+
+    async def get(self, discord_id: int, tx=None) -> Player | None:
         row = await self.fetch_one(
             """
             SELECT *
             FROM players
             WHERE discord_id = ?
             """,
-            (discord_id,)
+            (discord_id,),
+            tx
         )
 
         return None if row is None else self._map(row)
 
-    async def exists(self, discord_id: int) -> bool:
+    async def exists(self, discord_id: int, tx=None) -> bool:
         return await self.query_exists(
             """
             SELECT EXISTS(SELECT 1
                           FROM players
                           WHERE discord_id = ?)
             """,
-            (discord_id,)
+            (discord_id,),
+            tx
         )
 
-    async def delete(self, discord_id: int):
+    async def delete(self, discord_id: int, tx=None):
         await self.execute(
             """
             DELETE
             FROM players
             WHERE discord_id = ?
             """,
-            (discord_id,)
+            (discord_id,),
+            tx
         )
 
-    async def get_all(self) -> list[Player]:
+    async def get_all(self, tx=None) -> list[Player]:
         rows = await self.fetch_all(
             """
             SELECT *
             FROM players
             ORDER BY username
-            """
+            """,
+            (),
+            tx
         )
 
         return [self._map(row) for row in rows]
 
-    async def update(self, player: Player):
+    async def update(self, player: Player, tx=None):
         async with self.database.connection() as db:
             await db.execute(
                 """
@@ -105,13 +114,15 @@ class PlayerRepository(BaseRepository):
                     self.to_database_datetime(player.last_roll),
                     self.to_database_datetime(player.last_claim),
                     player.discord_id
-                )
+                ),
+                tx
             )
 
     async def update_username(
             self,
             discord_id: int,
-            username: str
+            username: str,
+            tx=None
     ):
         async with self.database.connection() as db:
             await db.execute(
@@ -120,13 +131,15 @@ class PlayerRepository(BaseRepository):
                 SET username = ?
                 WHERE discord_id = ?
                 """,
-                (username, discord_id)
+                (username, discord_id),
+                tx
             )
 
     async def update_display_name(
             self,
             discord_id: int,
-            display_name: str | None
+            display_name: str | None,
+            tx=None
     ):
         async with self.database.connection() as db:
             await db.execute(
@@ -135,13 +148,15 @@ class PlayerRepository(BaseRepository):
                 SET display_name = ?
                 WHERE discord_id = ?
                 """,
-                (display_name, discord_id)
+                (display_name, discord_id),
+                tx
             )
 
     async def set_gold(
             self,
             discord_id: int,
-            gold: int
+            gold: int,
+            tx=None
     ):
         async with self.database.connection() as db:
             await db.execute(
@@ -150,13 +165,15 @@ class PlayerRepository(BaseRepository):
                 SET gold = ?
                 WHERE discord_id = ?
                 """,
-                (gold, discord_id)
+                (gold, discord_id),
+                tx
             )
 
     async def add_gold(
             self,
             discord_id: int,
-            amount: int
+            amount: int,
+            tx=None,
     ):
         async with self.database.connection() as db:
             await db.execute(
@@ -165,13 +182,15 @@ class PlayerRepository(BaseRepository):
                 SET gold = gold + ?
                 WHERE discord_id = ?
                 """,
-                (amount, discord_id)
+                (amount, discord_id),
+                tx
             )
 
     async def remove_gold(
             self,
             discord_id: int,
-            amount: int
+            amount: int,
+            tx=None
     ):
         async with self.database.connection() as db:
             await db.execute(
@@ -180,13 +199,15 @@ class PlayerRepository(BaseRepository):
                 SET gold = MAX(0, gold - ?)
                 WHERE discord_id = ?
                 """,
-                (amount, discord_id)
+                (amount, discord_id),
+                tx
             )
 
     async def set_last_roll(
             self,
             discord_id: int,
-            timestamp: datetime
+            timestamp: datetime,
+            tx=None,
     ):
         async with self.database.connection() as db:
             await db.execute(
@@ -198,13 +219,15 @@ class PlayerRepository(BaseRepository):
                 (
                     self.to_database_datetime(timestamp),
                     discord_id
-                )
+                ),
+                tx
             )
 
     async def set_last_claim(
             self,
             discord_id: int,
-            timestamp: datetime
+            timestamp: datetime,
+            tx=None,
     ):
         async with self.database.connection() as db:
             await db.execute(
@@ -216,5 +239,6 @@ class PlayerRepository(BaseRepository):
                 (
                     self.to_database_datetime(timestamp),
                     discord_id
-                )
+                ),
+                tx
             )

@@ -25,39 +25,83 @@ class BaseRepository:
     async def execute(
             self,
             query: str,
-            parameters: tuple = ()
-    ) -> int:
+            parameters: tuple = (),
+            tx: aiosqlite.Connection | None = None
+    ):
         """
         Executes INSERT, UPDATE or DELETE.
 
         Returns the number of affected rows.
         """
 
+        if tx is not None:
+            cursor = await tx.execute(
+                query,
+                parameters
+            )
+
+            return cursor
+
         async with self.database.connection() as db:
-            cursor = await db.execute(query, parameters)
-            return cursor.rowcount
+            cursor = await db.execute(
+                query,
+                parameters
+            )
+
+            return cursor
 
     async def fetch_one(
             self,
-            query: str,
-            parameters: tuple = ()
-    ) -> aiosqlite.Row | None:
+            query,
+            parameters=(),
+            tx: aiosqlite.Connection | None = None
+    ):
         """
         Executes a SELECT returning a single row.
         """
 
+        if tx is not None:
+            cursor = await tx.execute(
+                query,
+                parameters
+            )
+
+            return await cursor.fetchone()
+
         async with self.database.connection() as db:
-            cursor = await db.execute(query, parameters)
+            cursor = await db.execute(
+                query,
+                parameters
+            )
+
             return await cursor.fetchone()
 
     async def fetch_all(
             self,
             query: str,
-            parameters: tuple = ()
+            parameters: tuple = (),
+            tx=None
     ) -> list[aiosqlite.Row]:
         """
         Executes a SELECT returning multiple rows.
         """
+
+        if tx is not None:
+            cursor = await tx.execute(
+                query,
+                parameters
+            )
+
+            return await cursor.fetchall()
+
+        async with self.database.connection() as db:
+            cursor = await db.execute(
+                query,
+                parameters
+            )
+
+            return await cursor.fetchall()
+
 
         async with self.database.connection() as db:
             cursor = await db.execute(query, parameters)
@@ -66,12 +110,13 @@ class BaseRepository:
     async def query_exists(
             self,
             query: str,
-            parameters: tuple = ()
+            parameters: tuple = (),
+            tx=None
     ) -> bool:
         """
         Executes a SELECT EXISTS(...) query.
         """
 
-        row = await self.fetch_one(query, parameters)
+        row = await self.fetch_one(query, parameters, tx)
 
         return bool(row[0]) if row else False

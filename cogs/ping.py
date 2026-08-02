@@ -1,7 +1,7 @@
 from discord import app_commands
 from discord.ext import commands
 
-from utils.embeds import EmbedFactory
+from embeds.embed_factory import EmbedFactory
 from utils.colours import ping_colour
 
 

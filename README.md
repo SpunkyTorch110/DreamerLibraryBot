@@ -12,4 +12,6 @@ This bot is in development so don't expect much for a while.
 - Discord.py
 - Dotenv
 
-To run the code you should create a .env file with your own discord bot token.
+To run the code you should create a .env file with your own discord bot token and the admins discord ID (for admin commands).
+
+The config.py file has some configurations that can and should be changed.

@@ -20,7 +20,8 @@ class InventoryRepository(BaseRepository):
     async def get(
             self,
             player_id: int,
-            page_id: int
+            page_id: int,
+            tx=None
     ) -> Inventory | None:
         row = await self.fetch_one(
             """
@@ -32,14 +33,16 @@ class InventoryRepository(BaseRepository):
             (
                 player_id,
                 page_id
-            )
+            ),
+            tx
         )
 
         return None if row is None else self._map_row(row)
 
     async def get_inventory(
             self,
-            player_id: int
+            player_id: int,
+            tx=None
     ) -> list[Inventory]:
         rows = await self.fetch_all(
             """
@@ -48,7 +51,8 @@ class InventoryRepository(BaseRepository):
             WHERE player_id = ?
             ORDER BY first_obtained
             """,
-            (player_id,)
+            (player_id,),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
@@ -56,7 +60,8 @@ class InventoryRepository(BaseRepository):
     async def exists(
             self,
             player_id: int,
-            page_id: int
+            page_id: int,
+            tx=None
     ) -> bool:
         return await self.query_exists(
             """
@@ -68,13 +73,15 @@ class InventoryRepository(BaseRepository):
             (
                 player_id,
                 page_id
-            )
+            ),
+            tx
         )
 
     async def delete(
             self,
             player_id: int,
-            page_id: int
+            page_id: int,
+            tx=None
     ):
         await self.execute(
             """
@@ -86,14 +93,16 @@ class InventoryRepository(BaseRepository):
             (
                 player_id,
                 page_id
-            )
+            ),
+            tx
         )
 
     async def add_page(
             self,
             player_id: int,
             page_id: int,
-            amount: int = 1
+            amount: int = 1,
+            tx=None
     ):
         await self.execute(
             """
@@ -114,14 +123,16 @@ class InventoryRepository(BaseRepository):
                 page_id,
                 amount,
                 self.to_database_datetime(datetime.now())
-            )
+            ),
+            tx
         )
 
     async def remove_page(
             self,
             player_id: int,
             page_id: int,
-            amount: int = 1
+            amount: int = 1,
+            tx=None,
     ):
         await self.execute(
             """
@@ -136,7 +147,8 @@ class InventoryRepository(BaseRepository):
                 amount,
                 player_id,
                 page_id
-            )
+            ),
+            tx
         )
 
         await self.execute(
@@ -150,14 +162,16 @@ class InventoryRepository(BaseRepository):
             (
                 player_id,
                 page_id
-            )
+            ),
+            tx
         )
 
     async def set_amount(
             self,
             player_id: int,
             page_id: int,
-            amount: int
+            amount: int,
+            tx=None,
     ):
         await self.execute(
             """
@@ -172,13 +186,15 @@ class InventoryRepository(BaseRepository):
                 amount,
                 player_id,
                 page_id
-            )
+            ),
+            tx
         )
 
     async def get_amount(
             self,
             player_id: int,
-            page_id: int
+            page_id: int,
+            tx=None
     ) -> int:
         row = await self.fetch_one(
             """
@@ -190,7 +206,8 @@ class InventoryRepository(BaseRepository):
             (
                 player_id,
                 page_id
-            )
+            ),
+            tx
         )
 
         return 0 if row is None else row["amount"]
@@ -199,7 +216,8 @@ class InventoryRepository(BaseRepository):
             self,
             player_id: int,
             page_id: int,
-            favourite: bool
+            favourite: bool,
+            tx=None
     ):
         await self.execute(
             """
@@ -214,12 +232,14 @@ class InventoryRepository(BaseRepository):
                 int(favourite),
                 player_id,
                 page_id
-            )
+            ),
+            tx
         )
 
     async def get_favourites(
             self,
-            player_id: int
+            player_id: int,
+            tx=None
     ) -> list[Inventory]:
         rows = await self.fetch_all(
             """
@@ -228,14 +248,16 @@ class InventoryRepository(BaseRepository):
             WHERE player_id = ?
               AND favourite = 1
             """,
-            (player_id,)
+            (player_id,),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
     async def count_unique_pages(
             self,
-            player_id: int
+            player_id: int,
+            tx=None
     ) -> int:
         row = await self.fetch_one(
             """
@@ -243,14 +265,16 @@ class InventoryRepository(BaseRepository):
             FROM inventory
             WHERE player_id = ?
             """,
-            (player_id,)
+            (player_id,),
+            tx
         )
 
         return row[0]
 
     async def count_total_pages(
             self,
-            player_id: int
+            player_id: int,
+            tx=None
     ) -> int:
         row = await self.fetch_one(
             """
@@ -258,7 +282,8 @@ class InventoryRepository(BaseRepository):
             FROM inventory
             WHERE player_id = ?
             """,
-            (player_id,)
+            (player_id,),
+            tx
         )
 
         return 0 if row[0] is None else row[0]

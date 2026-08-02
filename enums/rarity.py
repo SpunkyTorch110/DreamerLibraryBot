@@ -1,6 +1,6 @@
 from enum import IntEnum
 
 class Rarity(IntEnum):
-    SINGLE_STAR = 0,
-    DOUBLE_STAR = 1,
-    TRIPLE_START = 2
+    SINGLE_STAR = 1,
+    DOUBLE_STAR = 2,
+    TRIPLE_STAR = 3

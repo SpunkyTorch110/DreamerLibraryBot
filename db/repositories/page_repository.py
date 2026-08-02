@@ -30,26 +30,26 @@ class PageRepository(BaseRepository):
             created_at=self.from_database_datetime(row["created_at"])
         )
 
-    async def create(self, page: Page):
-        await self.execute(
+    async def create(self, page: Page, tx=None) -> Page:
+        cursor = await self.execute(
             """
             INSERT INTO pages
             (name,
-             gender,
-             rank,
-             rarity,
-             type,
-             description,
-             strength,
-             dexterity,
-             constitution,
-             intelligence,
-             wisdom,
-             charisma,
-             collection_id,
-             owner_id,
-             discovered,
-             created_at)
+            gender,
+            rank,
+            rarity,
+            type,
+            description,
+            strength,
+            dexterity,
+            constitution,
+            intelligence,
+            wisdom,
+            charisma,
+            collection_id,
+            owner_id,
+            discovered,
+            created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
@@ -69,44 +69,52 @@ class PageRepository(BaseRepository):
                 page.owner_id,
                 int(page.discovered),
                 self.to_database_datetime(page.created_at)
-            )
+            ),
+            tx
         )
 
-    async def get(self, page_id: int) -> Page | None:
+        page.id = cursor.lastrowid
+
+        return page
+
+    async def get(self, page_id: int, tx=None) -> Page | None:
         row = await self.fetch_one(
             """
             SELECT *
             FROM pages
             WHERE id = ?
             """,
-            (page_id,)
+            (page_id,),
+            tx
         )
 
         return None if row is None else self._map_row(row)
 
-    async def get_by_name(self, name: str) -> Page | None:
+    async def get_by_name(self, name: str, tx=None) -> Page | None:
         row = await self.fetch_one(
             """
             SELECT *
             FROM pages
             WHERE name = ?
             """,
-            (name,)
+            (name,),
+            tx
         )
 
         return None if row is None else self._map_row(row)
 
-    async def exists(self, page_id: int) -> bool:
+    async def exists(self, page_id: int, tx=None) -> bool:
         return await self.query_exists(
             """
             SELECT EXISTS(SELECT 1
                           FROM pages
                           WHERE id = ?)
             """,
-            (page_id,)
+            (page_id,),
+            tx
         )
 
-    async def update(self, page: Page):
+    async def update(self, page: Page, tx=None):
         await self.execute(
             """
             UPDATE pages
@@ -144,33 +152,38 @@ class PageRepository(BaseRepository):
                 page.owner_id,
                 int(page.discovered),
                 page.id
-            )
+            ),
+            tx
         )
 
-    async def delete(self, page_id: int):
+    async def delete(self, page_id: int, tx=None):
         await self.execute(
             """
             DELETE
             FROM pages
             WHERE id = ?
             """,
-            (page_id,)
+            (page_id,),
+            tx
         )
 
-    async def get_all(self) -> list[Page]:
+    async def get_all(self, tx=None) -> list[Page]:
         rows = await self.fetch_all(
             """
             SELECT *
             FROM pages
             ORDER BY name
-            """
+            """,
+            (),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
     async def get_by_collection(
             self,
-            collection_id: int
+            collection_id: int,
+            tx=None
     ) -> list[Page]:
         rows = await self.fetch_all(
             """
@@ -179,14 +192,16 @@ class PageRepository(BaseRepository):
             WHERE collection_id = ?
             ORDER BY name
             """,
-            (collection_id,)
+            (collection_id,),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
     async def get_by_rarity(
             self,
-            rarity: Rarity
+            rarity: Rarity,
+            tx=None
     ) -> list[Page]:
         rows = await self.fetch_all(
             """
@@ -195,14 +210,16 @@ class PageRepository(BaseRepository):
             WHERE rarity = ?
             ORDER BY name
             """,
-            (int(rarity),)
+            (int(rarity),),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
     async def get_by_rank(
             self,
-            rank: Rank
+            rank: Rank,
+            tx=None
     ) -> list[Page]:
         rows = await self.fetch_all(
             """
@@ -211,14 +228,16 @@ class PageRepository(BaseRepository):
             WHERE rank = ?
             ORDER BY name
             """,
-            (int(rank),)
+            (int(rank),),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
     async def get_by_type(
             self,
-            page_type: PageType
+            page_type: PageType,
+            tx=None
     ) -> list[Page]:
         rows = await self.fetch_all(
             """
@@ -227,35 +246,41 @@ class PageRepository(BaseRepository):
             WHERE type = ?
             ORDER BY name
             """,
-            (int(page_type),)
+            (int(page_type),),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
-    async def count(self) -> int:
+    async def count(self, tx=None) -> int:
         row = await self.fetch_one(
             """
             SELECT COUNT(*)
             FROM pages
-            """
+            """,
+            (),
+            tx
         )
 
         return row[0]
 
-    async def count_discovered(self) -> int:
+    async def count_discovered(self, tx=None) -> int:
         row = await self.fetch_one(
             """
             SELECT COUNT(*)
             FROM pages
             WHERE discovered = 1
-            """
+            """,
+            (),
+            tx
         )
 
         return row[0]
 
     async def count_by_collection(
             self,
-            collection_id: int
+            collection_id: int,
+            tx=None
     ) -> int:
         row = await self.fetch_one(
             """
@@ -263,7 +288,8 @@ class PageRepository(BaseRepository):
             FROM pages
             WHERE collection_id = ?
             """,
-            (collection_id,)
+            (collection_id,),
+            tx
         )
 
         return row[0]
@@ -271,7 +297,8 @@ class PageRepository(BaseRepository):
     async def set_owner(
             self,
             page_id: int,
-            player_id: int
+            player_id: int,
+            tx=None
     ):
         await self.execute(
             """
@@ -282,13 +309,15 @@ class PageRepository(BaseRepository):
             (
                 player_id,
                 page_id
-            )
+            ),
+            tx
         )
 
     async def discover(
             self,
             page_id: int,
-            player_id: int
+            player_id: int,
+            tx=None
     ):
         await self.execute(
             """
@@ -300,12 +329,14 @@ class PageRepository(BaseRepository):
             (
                 player_id,
                 page_id
-            )
+            ),
+            tx
         )
 
     async def is_discovered(
             self,
-            page_id: int
+            page_id: int,
+            tx=None
     ) -> bool:
         return await self.query_exists(
             """
@@ -314,36 +345,42 @@ class PageRepository(BaseRepository):
                           WHERE id = ?
                             AND discovered = 1)
             """,
-            (page_id,)
+            (page_id,),
+            tx
         )
 
-    async def get_all_discovered(self) -> list[Page]:
+    async def get_all_discovered(self, tx=None) -> list[Page]:
         rows = await self.fetch_all(
             """
             SELECT *
             FROM pages
             WHERE discovered = 1
             ORDER BY name
-            """
+            """,
+            (),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
-    async def get_all_undiscovered(self) -> list[Page]:
+    async def get_all_undiscovered(self, tx=None) -> list[Page]:
         rows = await self.fetch_all(
             """
             SELECT *
             FROM pages
             WHERE discovered = 0
             ORDER BY name
-            """
+            """,
+            (),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
     async def get_by_owner(
             self,
-            player_id: int
+            player_id: int,
+            tx=None
     ) -> list[Page]:
         rows = await self.fetch_all(
             """
@@ -352,7 +389,8 @@ class PageRepository(BaseRepository):
             WHERE owner_id = ?
             ORDER BY name
             """,
-            (player_id,)
+            (player_id,),
+            tx
         )
 
         return [self._map_row(row) for row in rows]

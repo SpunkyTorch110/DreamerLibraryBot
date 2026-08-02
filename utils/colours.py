@@ -11,7 +11,6 @@ class Colours:
 
     INFO = discord.Colour.blurple()
 
-
 def ping_colour(ping: int) -> Colour:
 
     if ping <= 80:

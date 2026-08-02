@@ -13,8 +13,8 @@ class PageAliasRepository(BaseRepository):
             alias=row["alias"]
         )
 
-    async def create(self, page_alias: PageAlias):
-        await self.execute(
+    async def create(self, page_alias: PageAlias, tx=None) -> PageAlias:
+        cursor = await self.execute(
             """
             INSERT INTO page_aliases
             (page_id,
@@ -24,12 +24,18 @@ class PageAliasRepository(BaseRepository):
             (
                 page_alias.page_id,
                 page_alias.alias
-            )
+            ),
+            tx
         )
+
+        page_alias.id = cursor.lastrowid
+
+        return page_alias
 
     async def get(
             self,
-            alias_id: int
+            alias_id: int,
+            tx=None
     ) -> PageAlias | None:
         row = await self.fetch_one(
             """
@@ -37,14 +43,16 @@ class PageAliasRepository(BaseRepository):
             FROM page_aliases
             WHERE id = ?
             """,
-            (alias_id,)
+            (alias_id,),
+            tx
         )
 
         return None if row is None else self._map_row(row)
 
     async def exists(
             self,
-            alias: str
+            alias: str,
+            tx=None,
     ) -> bool:
         return await self.query_exists(
             """
@@ -52,12 +60,14 @@ class PageAliasRepository(BaseRepository):
                           FROM page_aliases
                           WHERE LOWER(alias) = LOWER(?))
             """,
-            (alias,)
+            (alias,),
+            tx
         )
 
     async def get_by_page(
             self,
-            page_id: int
+            page_id: int,
+            tx=None
     ) -> list[PageAlias]:
         rows = await self.fetch_all(
             """
@@ -66,14 +76,16 @@ class PageAliasRepository(BaseRepository):
             WHERE page_id = ?
             ORDER BY alias
             """,
-            (page_id,)
+            (page_id,),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
     async def search(
             self,
-            text: str
+            text: str,
+            tx=None
     ) -> list[PageAlias]:
         rows = await self.fetch_all(
             """
@@ -83,12 +95,13 @@ class PageAliasRepository(BaseRepository):
                       LIKE LOWER(?)
             ORDER BY alias
             """,
-            (f"%{text}%",)
+            (f"%{text}%",),
+            tx
         )
 
         return [self._map_row(row) for row in rows]
 
-    async def update(self, page_alias: PageAlias):
+    async def update(self, page_alias: PageAlias, tx=None):
         await self.execute(
             """
             UPDATE page_aliases
@@ -98,12 +111,14 @@ class PageAliasRepository(BaseRepository):
             (
                 page_alias.alias,
                 page_alias.id
-            )
+            ),
+            tx
         )
 
     async def delete(
             self,
-            alias_id: int
+            alias_id: int,
+            tx=None
     ):
         await self.execute(
             """
@@ -111,12 +126,14 @@ class PageAliasRepository(BaseRepository):
             FROM page_aliases
             WHERE id = ?
             """,
-            (alias_id,)
+            (alias_id,),
+            tx
         )
 
     async def delete_by_page(
             self,
-            page_id: int
+            page_id: int,
+            tx=None
     ):
         await self.execute(
             """
@@ -124,12 +141,14 @@ class PageAliasRepository(BaseRepository):
             FROM page_aliases
             WHERE page_id = ?
             """,
-            (page_id,)
+            (page_id,),
+            tx
         )
 
     async def count(
             self,
-            page_id: int
+            page_id: int,
+            tx=None
     ) -> int:
         row = await self.fetch_one(
             """
@@ -137,7 +156,8 @@ class PageAliasRepository(BaseRepository):
             FROM page_aliases
             WHERE page_id = ?
             """,
-            (page_id,)
+            (page_id,),
+            tx
         )
 
         return row[0]
