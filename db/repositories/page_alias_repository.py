@@ -49,6 +49,23 @@ class PageAliasRepository(BaseRepository):
 
         return None if row is None else self._map_row(row)
 
+    async def get_by_alias(
+            self,
+            alias: str,
+            tx=None
+    ) -> PageAlias | None:
+        row = await self.fetch_one(
+            """
+            SELECT *
+            FROM page_aliases
+            WHERE alias = ?
+            """,
+            (alias,),
+            tx
+        )
+
+        return None if row is None else self._map_row(row)
+
     async def exists(
             self,
             page_id: int,

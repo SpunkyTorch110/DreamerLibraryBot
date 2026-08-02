@@ -9,6 +9,7 @@ from db.repositories.page_repository import PageRepository
 from models.create_page_request import CreatePageRequest
 from models.edit_page_general import EditPageGeneralRequest
 from models.edit_page_stats import EditPageStatsRequest
+from models.page_view import PageView
 from models.schema import page_image
 from models.schema.collection import Collection
 from models.schema.page import Page
@@ -263,3 +264,4 @@ class AdminService:
             )
 
             return page
+

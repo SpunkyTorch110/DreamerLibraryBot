@@ -13,6 +13,7 @@ from db.repositories.page_repository import PageRepository
 from db.repositories.player_repository import PlayerRepository
 from services.AdminService import AdminService
 from services.PageService import PageService
+from services.PlayerService import PlayerService
 
 
 class DreamerLibraryBot(commands.Bot):
@@ -27,6 +28,7 @@ class DreamerLibraryBot(commands.Bot):
 
     admin_service: AdminService
     page_service: PageService
+    player_service: PlayerService
 
     def __init__(self):
 
@@ -63,6 +65,11 @@ class DreamerLibraryBot(commands.Bot):
         )
         self.page_service = PageService(
             page_repository=self.page_repository,
+            collection_repository=self.collection_repository,
+            page_image_repository=self.page_image_repository,
+        )
+        self.player_service = PlayerService(
+            bot=self
         )
 
         await self.load_extension("cogs.ping")

@@ -394,3 +394,26 @@ class PageRepository(BaseRepository):
         )
 
         return [self._map_row(row) for row in rows]
+
+    async def find_by_name_or_alias(
+            self,
+            search: str,
+            tx=None
+    ) -> Page | None:
+        row = await self.fetch_one(
+            """
+            SELECT DISTINCT p.*
+            FROM pages p
+                     LEFT JOIN page_aliases pa
+                               ON pa.page_id = p.id
+            WHERE p.name = ?
+               OR pa.alias = ? LIMIT 1
+            """,
+            (
+                search,
+                search
+            ),
+            tx
+        )
+
+        return None if row is None else self._map_row(row)

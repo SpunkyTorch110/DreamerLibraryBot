@@ -173,3 +173,39 @@ class PageImageRepository(BaseRepository):
         )
 
         return row[0]
+
+    async def get_main_image(
+            self,
+            page_id: int,
+            tx=None
+    ) -> PageImage | None:
+        row = await self.fetch_one(
+            """
+            SELECT *
+            FROM page_images
+            WHERE page_id = ?
+            ORDER BY display_order ASC LIMIT 1
+            """,
+            (page_id,),
+            tx
+        )
+
+        return None if row is None else self._map_row(row)
+
+    async def get_all_by_page(
+            self,
+            page_id: int,
+            tx=None
+    ) -> list[PageImage]:
+        rows = await self.fetch_all(
+            """
+            SELECT *
+            FROM page_images
+            WHERE page_id = ?
+            ORDER BY display_order
+            """,
+            (page_id,),
+            tx
+        )
+
+        return [self._map_row(row) for row in rows]

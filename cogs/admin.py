@@ -13,6 +13,7 @@ from models.create_page_request import CreatePageRequest
 
 from models.edit_page_general import EditPageGeneralRequest
 from models.edit_page_stats import EditPageStatsRequest
+from models.page_view import PageView
 from utils.colours import Colours
 from embeds.embed_factory import EmbedFactory
 
@@ -230,6 +231,40 @@ class Admin(commands.Cog):
         await interaction.followup.send(
             embed=embed,
             ephemeral=True
+        )
+
+    @admin.command(
+        name="page_show",
+        description="Shows a page by its name or one of its aliases."
+    )
+    @is_admin()
+    async def page_show(
+            self,
+            interaction: discord.Interaction,
+            page: str,
+            show_all: bool = True,
+            hidden: bool = True
+    ):
+        await interaction.response.defer(ephemeral=hidden)
+
+        page_data: PageView | None = await self.bot.page_service.find_page(page)
+
+        if page_data is None:
+            raise ValueError(f"No page named or aliased '{page}' was found.")
+
+        page = page_data.page
+        collection = page_data.collection
+        page_image = page_data.image
+
+        original_owner: discord.User | None = await self.bot.player_service.get_discord_user(page.owner_id)
+
+        page_count = await self.bot.page_service.get_total_pages()
+
+        embed = create_page_embed(page, collection, page_image, page_count, original_owner, not show_all)
+
+        await interaction.followup.send(
+            embed=embed,
+            ephemeral=hidden
         )
 
 async def setup(bot):
