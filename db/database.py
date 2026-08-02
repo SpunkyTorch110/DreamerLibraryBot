@@ -32,6 +32,7 @@ class Database:
         """
 
         connection = await aiosqlite.connect(self.path)
+        await connection.execute("PRAGMA foreign_keys = ON")
         connection.row_factory = aiosqlite.Row
 
         try:

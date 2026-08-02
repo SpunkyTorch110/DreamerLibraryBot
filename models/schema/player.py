@@ -15,4 +15,7 @@ class Player:
     last_roll: datetime | None
     last_claim: datetime | None
 
+    rolls_remaining: int | None
+    claims_remaining: int | None
+
     created_at: datetime

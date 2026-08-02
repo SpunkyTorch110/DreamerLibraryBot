@@ -254,6 +254,21 @@ class InventoryRepository(BaseRepository):
 
         return [self._map_row(row) for row in rows]
 
+    async def delete_by_page(
+            self,
+            page_id: int,
+            tx=None
+    ):
+        await self.execute(
+            """
+            DELETE
+            FROM inventories
+            WHERE page_id = ?
+            """,
+            (page_id,),
+            tx
+        )
+
     async def count_unique_pages(
             self,
             player_id: int,

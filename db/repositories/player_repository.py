@@ -15,7 +15,9 @@ class PlayerRepository(BaseRepository):
             gold=row["gold"],
             last_roll=self.from_database_datetime(row["last_roll"]),
             last_claim=self.from_database_datetime(row["last_claim"]),
-            created_at=self.from_database_datetime(row["created_at"])
+            created_at=self.from_database_datetime(row["created_at"]),
+            rolls_remaining=row["rolls_remaining"],
+            claims_remaining=row["claims_remaining"],
         )
 
     async def create(self, player: Player, tx=None) -> Player:
@@ -28,8 +30,10 @@ class PlayerRepository(BaseRepository):
                  gold,
                  last_roll,
                  last_claim,
+                 rolls_remaining,
+                 claims_remaining,
                  created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     player.discord_id,
@@ -38,6 +42,8 @@ class PlayerRepository(BaseRepository):
                     player.gold,
                     self.to_database_datetime(player.last_roll),
                     self.to_database_datetime(player.last_claim),
+                    player.rolls_remaining,
+                    player.claims_remaining,
                     self.to_database_datetime(player.created_at)
                 ),
                 tx
@@ -96,27 +102,30 @@ class PlayerRepository(BaseRepository):
         return [self._map(row) for row in rows]
 
     async def update(self, player: Player, tx=None):
-        async with self.database.connection() as db:
-            await db.execute(
-                """
-                UPDATE players
-                SET username = ?,
-                    display_name = ?,
-                    gold = ?,
-                    last_roll = ?,
-                    last_claim = ?
-                WHERE discord_id = ?
-                """,
-                (
-                    player.username,
-                    player.display_name,
-                    player.gold,
-                    self.to_database_datetime(player.last_roll),
-                    self.to_database_datetime(player.last_claim),
-                    player.discord_id
-                ),
-                tx
-            )
+        await self.execute(
+            """
+            UPDATE players
+            SET username     = ?,
+                display_name = ?,
+                gold         = ?,
+                last_roll    = ?,
+                last_claim   = ?,
+                rolls_remaining   = ?,
+                claims_remaining  = ?
+            WHERE discord_id = ?
+            """,
+            (
+                player.username,
+                player.display_name,
+                player.gold,
+                self.to_database_datetime(player.last_roll),
+                self.to_database_datetime(player.last_claim),
+                player.rolls_remaining,
+                player.claims_remaining,
+                player.discord_id
+            ),
+            tx
+        )
 
     async def update_username(
             self,
@@ -124,8 +133,7 @@ class PlayerRepository(BaseRepository):
             username: str,
             tx=None
     ):
-        async with self.database.connection() as db:
-            await db.execute(
+            await self.execute(
                 """
                 UPDATE players
                 SET username = ?
@@ -141,8 +149,7 @@ class PlayerRepository(BaseRepository):
             display_name: str | None,
             tx=None
     ):
-        async with self.database.connection() as db:
-            await db.execute(
+            await self.execute(
                 """
                 UPDATE players
                 SET display_name = ?
@@ -158,8 +165,7 @@ class PlayerRepository(BaseRepository):
             gold: int,
             tx=None
     ):
-        async with self.database.connection() as db:
-            await db.execute(
+            await self.execute(
                 """
                 UPDATE players
                 SET gold = ?
@@ -175,8 +181,7 @@ class PlayerRepository(BaseRepository):
             amount: int,
             tx=None,
     ):
-        async with self.database.connection() as db:
-            await db.execute(
+            await self.execute(
                 """
                 UPDATE players
                 SET gold = gold + ?
@@ -192,8 +197,7 @@ class PlayerRepository(BaseRepository):
             amount: int,
             tx=None
     ):
-        async with self.database.connection() as db:
-            await db.execute(
+            await self.execute(
                 """
                 UPDATE players
                 SET gold = MAX(0, gold - ?)
@@ -209,8 +213,7 @@ class PlayerRepository(BaseRepository):
             timestamp: datetime,
             tx=None,
     ):
-        async with self.database.connection() as db:
-            await db.execute(
+            await self.execute(
                 """
                 UPDATE players
                 SET last_roll = ?
@@ -229,8 +232,7 @@ class PlayerRepository(BaseRepository):
             timestamp: datetime,
             tx=None,
     ):
-        async with self.database.connection() as db:
-            await db.execute(
+            await self.execute(
                 """
                 UPDATE players
                 SET last_claim = ?
@@ -242,3 +244,68 @@ class PlayerRepository(BaseRepository):
                 ),
                 tx
             )
+
+    async def set_rolls_remaining(
+            self,
+            discord_id: int,
+            rolls_remaining: int,
+            tx=None
+    ):
+        await self.execute(
+            """
+            UPDATE players
+            SET rolls_remaining = ?
+            WHERE discord_id = ?
+            """,
+            (rolls_remaining, discord_id),
+            tx
+        )
+
+    async def consume_roll(
+            self,
+            discord_id: int,
+            tx=None
+    ):
+        await self.execute(
+            """
+            UPDATE players
+            SET rolls_remaining = MAX(0, rolls_remaining - 1)
+            WHERE discord_id = ?
+            """,
+            (discord_id,),
+            tx
+        )
+
+    async def reset_rolls_remaining(
+            self,
+            discord_id: int,
+            rolls_remaining: int,
+            tx=None
+    ):
+        await self.execute(
+            """
+            UPDATE players
+            SET rolls_used = ?
+            WHERE discord_id = ?
+            """,
+            (rolls_remaining, discord_id),
+            tx
+        )
+
+    async def reset_roll_and_claim_usage(
+            self,
+            discord_id: int,
+            rolls_remaining: int,
+            claims_remaining: int,
+            tx=None
+    ):
+        await self.execute(
+            """
+            UPDATE players
+            SET rolls_remaining  = ?,
+                claims_remaining = ?
+            WHERE discord_id = ?
+            """,
+            (rolls_remaining, claims_remaining, discord_id),
+            tx
+        )

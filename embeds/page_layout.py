@@ -122,7 +122,7 @@ def create_page_embed(page: Page, collect: Collection, page_image: PageImage,
     embed.set_image(url=page_image.image_url)
 
     embed.set_footer(
-        text=f"{collection_name} • {page.page_type.name.title()} • Page {page.id}/{total_pages}"
+        text=f"Collection: {collection_name} • {page.page_type.name.title()} • Page Number {page.id}/{total_pages}"
     )
 
     return embed

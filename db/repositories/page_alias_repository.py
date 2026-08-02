@@ -51,6 +51,7 @@ class PageAliasRepository(BaseRepository):
 
     async def exists(
             self,
+            page_id: int,
             alias: str,
             tx=None,
     ) -> bool:
@@ -58,9 +59,13 @@ class PageAliasRepository(BaseRepository):
             """
             SELECT EXISTS(SELECT 1
                           FROM page_aliases
-                          WHERE LOWER(alias) = LOWER(?))
+                          WHERE page_id = ?
+                            AND LOWER(alias) = LOWER(?))
             """,
-            (alias,),
+            (
+                page_id,
+                alias,
+            ),
             tx
         )
 

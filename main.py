@@ -57,7 +57,9 @@ class DreamerLibraryBot(commands.Bot):
             database=self.database,
             collection_repository=self.collection_repository,
             page_repository=self.page_repository,
-            page_image_repository=self.page_image_repository
+            page_image_repository=self.page_image_repository,
+            page_alias_repository=self.page_alias_repository,
+            inventory_repository=self.inventory_repository
         )
         self.page_service = PageService(
             page_repository=self.page_repository,
@@ -73,7 +75,6 @@ class DreamerLibraryBot(commands.Bot):
 
     async def on_ready(self):
         print(f"Logged in as {self.user}")
-
 
 async def main():
     bot = DreamerLibraryBot()

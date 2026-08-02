@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS players
 
     last_roll       INTEGER,
     last_claim      INTEGER,
+    
+    rolls_remaining      INTEGER NOT NULL,
+
+    claims_remaining    INTEGER NOT NULL,
 
     created_at      INTEGER NOT NULL
 );
@@ -42,7 +46,7 @@ CREATE TABLE IF NOT EXISTS pages
 (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    name                TEXT NOT NULL UNIQUE,
+    name                TEXT NOT NULL UNIQUE COLLATE NOCASE,
 
     gender              INTEGER,
 
@@ -71,7 +75,7 @@ CREATE TABLE IF NOT EXISTS pages
 
     FOREIGN KEY(collection_id) REFERENCES collections(id) ON DELETE SET NULL,
     
-    FOREIGN KEY(owner_id) REFERENCES players(discord_id)
+    FOREIGN KEY(owner_id) REFERENCES players(discord_id) ON DELETE SET NULL
 );"""
 
 PAGE_IMAGES_TABLE = """
@@ -84,6 +88,10 @@ CREATE TABLE IF NOT EXISTS page_images
     image_url       TEXT NOT NULL,
 
     display_order   INTEGER NOT NULL DEFAULT 0,
+    
+    UNIQUE(page_id, image_url)
+    
+    UNIQUE(page_id, display_order)
 
     FOREIGN KEY(page_id) REFERENCES pages(id) ON DELETE CASCADE
 );"""
@@ -95,13 +103,11 @@ CREATE TABLE IF NOT EXISTS page_aliases
 
     page_id INTEGER NOT NULL,
 
-    alias TEXT NOT NULL COLLATE NOCASE,
+    alias TEXT NOT NULL UNIQUE COLLATE NOCASE,
 
     UNIQUE(alias),
 
-    FOREIGN KEY(page_id)
-        REFERENCES pages(id)
-        ON DELETE CASCADE
+    FOREIGN KEY(page_id)REFERENCES pages(id) ON DELETE CASCADE
 );
 """
 
@@ -122,7 +128,7 @@ CREATE TABLE IF NOT EXISTS inventory
 
     FOREIGN KEY(player_id) REFERENCES players(discord_id) ON DELETE CASCADE,
 
-    FOREIGN KEY(page_id) REFERENCES pages(id)
+    FOREIGN KEY(page_id) REFERENCES pages(id) ON DELETE CASCADE
 );"""
 
 TABLES = [
@@ -163,6 +169,10 @@ INDEXES = [
     """
     CREATE INDEX IF NOT EXISTS idx_aliases_alias
     ON page_aliases(alias);
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_pages_discovered
+    ON pages(discovered);
     """
 ]
 
