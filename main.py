@@ -12,6 +12,7 @@ from db.repositories.page_image_repository import PageImageRepository
 from db.repositories.page_repository import PageRepository
 from db.repositories.player_repository import PlayerRepository
 from services.AdminService import AdminService
+from services.LibraryService import LibraryService
 from services.PageService import PageService
 from services.PlayerService import PlayerService
 
@@ -29,6 +30,7 @@ class DreamerLibraryBot(commands.Bot):
     admin_service: AdminService
     page_service: PageService
     player_service: PlayerService
+    library_service: LibraryService
 
     def __init__(self):
 
@@ -71,9 +73,17 @@ class DreamerLibraryBot(commands.Bot):
         self.player_service = PlayerService(
             bot=self
         )
+        self.library_service = LibraryService(
+            database=self.database,
+            page_repository=self.page_repository,
+            player_repository=self.player_repository,
+            collection_repository=self.collection_repository,
+            inventory_repository=self.inventory_repository,
+        )
 
         await self.load_extension("cogs.ping")
         await self.load_extension("cogs.admin")
+        await self.load_extension("cogs.library")
 
         print("Syncing slash commands...")
         await self.tree.sync()

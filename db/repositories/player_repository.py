@@ -3,6 +3,7 @@ import aiosqlite
 from db.repositories.base_repository import BaseRepository
 from datetime import datetime
 
+from models.leaderboard_entry import LeaderboardEntry
 from models.schema.player import Player
 
 class PlayerRepository(BaseRepository):
@@ -309,3 +310,111 @@ class PlayerRepository(BaseRepository):
             (rolls_remaining, claims_remaining, discord_id),
             tx
         )
+
+    async def total_gold(self, tx=None) -> int:
+        row = await self.fetch_one(
+            """
+            SELECT COALESCE(SUM(gold), 0) AS total
+            FROM players
+            """,
+            (),
+            tx
+        )
+
+        return row["total"]
+
+    async def get_top_pages(
+            self,
+            limit: int = 5,
+            connection=None
+    ) -> list[LeaderboardEntry]:
+        rows = await self.fetch_all(
+            """
+            SELECT p.discord_id,
+                   p.display_name,
+                   COALESCE(SUM(i.amount), 0) AS total
+            FROM players p
+                     LEFT JOIN inventory i
+                               ON i.player_id = p.discord_id
+            GROUP BY p.discord_id
+            ORDER BY total DESC, p.display_name LIMIT ?
+            """,
+            (limit,),
+            connection
+        )
+
+        return [
+            LeaderboardEntry(
+                discord_id=row["discord_id"],
+                username=row["display_name"],
+                value=row["total"]
+            )
+            for row in rows
+        ]
+
+    async def get_top_first_claims(
+            self,
+            limit: int = 5,
+            connection=None
+    ) -> list[LeaderboardEntry]:
+        rows = await self.fetch_all(
+            """
+            SELECT p.discord_id,
+                   p.display_name,
+                   COUNT(pg.id) AS total
+            FROM players p
+                     LEFT JOIN pages pg
+                               ON pg.owner_id = p.discord_id
+            GROUP BY p.discord_id
+            ORDER BY total DESC, p.display_name LIMIT ?
+            """,
+            (limit,),
+            connection
+        )
+
+        return [
+            LeaderboardEntry(
+                discord_id=row["discord_id"],
+                username=row["display_name"],
+                value=row["total"]
+            )
+            for row in rows
+        ]
+
+    async def get_top_gold(
+            self,
+            limit: int = 5,
+            connection=None
+    ) -> list[LeaderboardEntry]:
+        rows = await self.fetch_all(
+            """
+            SELECT discord_id,
+                   display_name,
+                   gold
+            FROM players
+            ORDER BY gold DESC, display_name LIMIT ?
+            """,
+            (limit,),
+            connection
+        )
+
+        return [
+            LeaderboardEntry(
+                discord_id=row["discord_id"],
+                username=row["display_name"],
+                value=row["gold"]
+            )
+            for row in rows
+        ]
+
+    async def count(self, tx=None) -> int:
+        row = await self.fetch_one(
+            """
+            SELECT COUNT(*) AS count
+            FROM players
+            """,
+            (),
+            tx
+        )
+
+        return row["count"]

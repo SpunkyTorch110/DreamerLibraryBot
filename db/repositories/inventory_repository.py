@@ -288,16 +288,14 @@ class InventoryRepository(BaseRepository):
 
     async def count_total_pages(
             self,
-            player_id: int,
             tx=None
     ) -> int:
         row = await self.fetch_one(
             """
             SELECT SUM(amount)
             FROM inventory
-            WHERE player_id = ?
             """,
-            (player_id,),
+            (),
             tx
         )
 

@@ -5,6 +5,7 @@ from enums.gender import Gender
 from enums.page_type import PageType
 from enums.rank import Rank
 from enums.rarity import Rarity
+from models.leaderboard_entry import LeaderboardEntry
 from models.schema.page import Page
 
 class PageRepository(BaseRepository):
@@ -417,3 +418,16 @@ class PageRepository(BaseRepository):
         )
 
         return None if row is None else self._map_row(row)
+
+    async def count_claimed(self, tx=None) -> int:
+        row = await self.fetch_one(
+            """
+            SELECT COUNT(*) AS count
+            FROM pages
+            WHERE owner_id IS NOT NULL
+            """,
+            (),
+            tx
+        )
+
+        return row["count"]

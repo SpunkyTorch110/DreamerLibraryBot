@@ -1,4 +1,5 @@
 from db.repositories.base_repository import BaseRepository
+from models.collection_progress import CollectionProgress
 
 from models.schema.collection import Collection
 
@@ -137,3 +138,48 @@ class CollectionRepository(BaseRepository):
         )
 
         return row[0]
+
+    async def count(self, tx=None) -> int:
+        row = await self.fetch_one(
+            """
+            SELECT COUNT(*) AS count
+            FROM collections
+            """,
+            (),
+            tx
+        )
+
+        return row["count"]
+
+    async def get_collection_progress(
+            self,
+            tx=None
+    ) -> list[CollectionProgress]:
+        rows = await self.fetch_all(
+            """
+            SELECT c.name,
+                   COUNT(p.id) AS total_pages,
+                   SUM(
+                           CASE
+                               WHEN p.owner_id IS NOT NULL THEN 1
+                               ELSE 0
+                               END
+                   )           AS claimed_pages
+            FROM collections c
+                     LEFT JOIN pages p
+                               ON p.collection_id = c.id
+            GROUP BY c.id, c.name
+            ORDER BY c.name
+            """,
+            (),
+            tx
+        )
+
+        return [
+            CollectionProgress(
+                collection_name=row["name"],
+                total_pages=row["total_pages"],
+                claimed_pages=row["claimed_pages"] or 0
+            )
+            for row in rows
+        ]
