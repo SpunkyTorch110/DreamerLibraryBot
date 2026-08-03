@@ -102,11 +102,6 @@ class BaseRepository:
 
             return await cursor.fetchall()
 
-
-        async with self.database.connection() as db:
-            cursor = await db.execute(query, parameters)
-            return await cursor.fetchall()
-
     async def query_exists(
             self,
             query: str,

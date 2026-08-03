@@ -66,6 +66,7 @@ class DreamerLibraryBot(commands.Bot):
             inventory_repository=self.inventory_repository
         )
         self.page_service = PageService(
+            database=self.database,
             page_repository=self.page_repository,
             collection_repository=self.collection_repository,
             page_image_repository=self.page_image_repository,
@@ -84,6 +85,7 @@ class DreamerLibraryBot(commands.Bot):
         await self.load_extension("cogs.ping")
         await self.load_extension("cogs.admin")
         await self.load_extension("cogs.library")
+        await self.load_extension("cogs.pages")
 
         print("Syncing slash commands...")
         await self.tree.sync()

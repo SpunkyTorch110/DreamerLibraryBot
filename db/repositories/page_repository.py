@@ -5,8 +5,13 @@ from enums.gender import Gender
 from enums.page_type import PageType
 from enums.rank import Rank
 from enums.rarity import Rarity
+from models.gallery_page import GalleryPage
 from models.leaderboard_entry import LeaderboardEntry
+from models.library_page_entry import LibraryPageEntry
+from models.schema.collection import Collection
 from models.schema.page import Page
+from models.schema.page_image import PageImage
+
 
 class PageRepository(BaseRepository):
 
@@ -431,3 +436,142 @@ class PageRepository(BaseRepository):
         )
 
         return row["count"]
+
+    async def get_library_entries(
+            self,
+            connection=None
+    ) -> list[LibraryPageEntry]:
+        rows = await self.fetch_all(
+            """
+            SELECT
+                id,
+                name,
+                rarity,
+                discovered,
+                owner_id IS NOT NULL AS claimed
+            FROM pages
+            ORDER BY id
+            """,
+            (
+    
+            ),
+            connection
+        )
+
+        return [
+            LibraryPageEntry(
+                id=row["id"],
+                name=row["name"],
+                discovered=bool(row["discovered"]),
+                rarity=Rarity(row["rarity"]),
+                claimed=bool(row["claimed"])
+            )
+            for row in rows
+        ]
+
+    async def get_gallery_pages(
+            self,
+            connection=None
+    ) -> list[GalleryPage]:
+
+        rows = await self.fetch_all(
+            """
+            SELECT
+
+                -- Page
+                p.id          AS page_id,
+                p.name,
+                p.gender,
+                p.rank,
+                p.rarity,
+                p.type,
+                p.description,
+                p.strength,
+                p.dexterity,
+                p.constitution,
+                p.intelligence,
+                p.wisdom,
+                p.charisma,
+                p.collection_id,
+                p.owner_id,
+                p.discovered,
+                p.created_at,
+
+                -- Collection
+                c.id          AS collection_id,
+                c.name        AS collection_name,
+                c.description AS collection_description,
+                c.image_url   AS collection_image,
+
+                -- Main Image
+                pi.id         AS image_id,
+                pi.image_url,
+                pi.display_order
+
+            FROM pages p
+
+                     INNER JOIN collections c
+                                ON c.id = p.collection_id
+
+                     LEFT JOIN page_images pi
+                               ON pi.page_id = p.id
+                                   AND pi.display_order = 0
+
+            ORDER BY p.id
+            """,
+            (),
+            connection
+        )
+
+        gallery = []
+
+        for row in rows:
+
+            page = Page(
+                id=row["page_id"],
+                name=row["name"],
+                gender=Gender(row["gender"]),
+                rank=Rank(row["rank"]),
+                rarity=Rarity(row["rarity"]),
+                page_type=PageType(row["type"]),
+                description=row["description"],
+                strength=row["strength"],
+                dexterity=row["dexterity"],
+                constitution=row["constitution"],
+                intelligence=row["intelligence"],
+                wisdom=row["wisdom"],
+                charisma=row["charisma"],
+                collection_id=row["collection_id"],
+                owner_id=row["owner_id"],
+                discovered=bool(row["discovered"]),
+                created_at=self.from_database_datetime(
+                    row["created_at"]
+                )
+            )
+
+            collection = Collection(
+                id=row["collection_id"],
+                name=row["collection_name"],
+                description=row["collection_description"],
+                image_url=row["collection_image"]
+            )
+
+            image = None
+
+            if row["image_id"] is not None:
+                image = PageImage(
+                    id=row["image_id"],
+                    page_id=page.id,
+                    image_url=row["image_url"],
+                    display_order=row["display_order"]
+                )
+
+            gallery.append(
+                GalleryPage(
+                    page=page,
+                    collection=collection,
+                    image=image
+                )
+            )
+
+        return gallery

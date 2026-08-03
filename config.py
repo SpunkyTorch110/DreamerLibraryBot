@@ -16,3 +16,11 @@ ADMIN_IDS = {
 # the location and name of the database file for the bots data
 DATABASE = "data/dreamerlibrarybot.db"
 
+# amount of players shown in the leaderboard
+MAX_LEADERBOARD_PLAYERS = 5
+
+# amount of pages that appear per page in the list
+MAX_PAGES_PER_PAGE = 20
+
+# amount of pages to skip in gallery viewing
+GALLERY_JUMP_SIZE = 5

@@ -1,3 +1,4 @@
+import config
 from models.collection_progress import CollectionProgress
 from models.library_info import LibraryInfo
 
@@ -86,15 +87,21 @@ class LibraryService:
             )
 
     async def get_leaderboards(self):
+
+        max_players = config.MAX_LEADERBOARD_PLAYERS
+
         async with self.database.transaction() as connection:
             return {
                 "pages": await self.player_repository.get_top_pages(
+                    max_players,
                     connection=connection
                 ),
                 "claims": await self.player_repository.get_top_first_claims(
+                    max_players,
                     connection=connection
                 ),
                 "gold": await self.player_repository.get_top_gold(
+                    max_players,
                     connection=connection
                 )
             }
