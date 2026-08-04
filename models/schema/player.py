@@ -12,10 +12,10 @@ class Player:
 
     gold: int
 
-    last_roll: datetime | None
-    last_claim: datetime | None
+    rolls_remaining: int
+    claims_remaining: int
 
-    rolls_remaining: int | None
-    claims_remaining: int | None
+    next_roll_at: datetime | None
+    next_claim_at: datetime | None
 
     created_at: datetime

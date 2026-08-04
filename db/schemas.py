@@ -10,21 +10,20 @@ CREATE TABLE IF NOT EXISTS schema_version
 PLAYERS_TABLE = """
 CREATE TABLE IF NOT EXISTS players
 (
-    discord_id      INTEGER PRIMARY KEY,
+    discord_id         INTEGER PRIMARY KEY,
 
-    username        TEXT NOT NULL,
-    display_name    TEXT,
+    username           TEXT NOT NULL,
+    display_name       TEXT,
 
-    gold            INTEGER NOT NULL DEFAULT 0,
+    gold               INTEGER NOT NULL DEFAULT 0,
 
-    last_roll       INTEGER,
-    last_claim      INTEGER,
-    
-    rolls_remaining      INTEGER NOT NULL,
+    rolls_remaining    INTEGER NOT NULL DEFAULT 3,
+    claims_remaining   INTEGER NOT NULL DEFAULT 1,
 
-    claims_remaining    INTEGER NOT NULL,
+    next_roll_at       INTEGER,
+    next_claim_at      INTEGER,
 
-    created_at      INTEGER NOT NULL
+    created_at         INTEGER NOT NULL
 );
 """
 

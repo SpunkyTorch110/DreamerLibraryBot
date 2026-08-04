@@ -72,7 +72,9 @@ class DreamerLibraryBot(commands.Bot):
             page_image_repository=self.page_image_repository,
         )
         self.player_service = PlayerService(
-            bot=self
+            bot=self,
+            database=self.database,
+            player_repository=self.player_repository,
         )
         self.library_service = LibraryService(
             database=self.database,
@@ -86,6 +88,7 @@ class DreamerLibraryBot(commands.Bot):
         await self.load_extension("cogs.admin")
         await self.load_extension("cogs.library")
         await self.load_extension("cogs.pages")
+        await self.load_extension("cogs.player")
 
         print("Syncing slash commands...")
         await self.tree.sync()

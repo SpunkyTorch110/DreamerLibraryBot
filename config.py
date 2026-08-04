@@ -24,3 +24,21 @@ MAX_PAGES_PER_PAGE = 20
 
 # amount of pages to skip in gallery viewing
 GALLERY_JUMP_SIZE = 5
+
+# time in hours for a single roll recharge to be added
+ROLL_RECHARGE = 4
+
+# max amount of rolls a player can have
+MAX_ROLLS = 6
+
+# time in hours for a single claim recharge to be added
+CLAIM_RECHARGE = 12
+
+# max amount of claims a player can have
+MAX_CLAIMS = 2
+
+# amount of rolls the player starts with initially
+STARTING_ROLLS = 3
+
+# amount of claims the players starts with initially
+STARTING_CLAIMS = 1
