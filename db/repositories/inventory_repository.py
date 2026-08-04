@@ -1,6 +1,8 @@
 from datetime import datetime
 
 from db.repositories.base_repository import BaseRepository
+from enums.rarity import Rarity
+from models.player_library_entry import PlayerLibraryEntry
 from models.schema.inventory import Inventory
 
 
@@ -286,17 +288,35 @@ class InventoryRepository(BaseRepository):
 
         return row[0]
 
+    async def count_total_player_pages(
+            self,
+            player_id: int,
+            tx=None
+    ) -> int:
+        row = await self.fetch_one(
+            """
+            SELECT COALESCE(SUM(amount), 0)
+            FROM inventory
+            WHERE player_id = ?
+            """,
+            (player_id,),
+            tx
+        )
+
+        return row[0]
+
     async def count_total_pages(
             self,
             tx=None
     ) -> int:
         row = await self.fetch_one(
             """
-            SELECT SUM(amount)
+            SELECT COALESCE(SUM(amount), 0)
             FROM inventory
             """,
             (),
             tx
         )
 
-        return 0 if row[0] is None else row[0]
+        return row[0]
+

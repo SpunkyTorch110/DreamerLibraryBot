@@ -3,6 +3,7 @@ from discord import app_commands
 import discord
 
 from embeds.embed_factory import EmbedFactory
+from modals.library_collections_view import LibraryCollectionsView
 from utils.colours import Colours
 
 
@@ -81,42 +82,14 @@ class Library(commands.Cog):
 
         collections = await self.bot.library_service.get_collection_progress()
 
-        embed = EmbedFactory.create(
-            title="📚 Global Collection Progress",
-            description="Claim progress of every collection of all players.\n\n",
-            colour=Colours.INFO
-        )
-
-        if self.bot.user:
-            embed.set_thumbnail(
-                url=self.bot.user.display_avatar.url
-            )
-
-        lines = []
-
-        for collection in collections:
-            percentage = (
-                collection.claimed_pages
-                / collection.total_pages
-                * 100
-                if collection.total_pages
-                else 0
-            )
-
-            lines.append(
-                f"**{collection.collection_name}**\n"
-                f"{collection.claimed_pages}/{collection.total_pages} "
-                f"({percentage:.1f}%)"
-            )
-
-        embed.description += "\n\n".join(lines)
-
-        embed.set_footer(
-            text=f"{len(collections)} collections"
+        view = LibraryCollectionsView(
+            bot=self.bot,
+            collections=collections
         )
 
         await interaction.followup.send(
-            embed=embed
+            embed=view.build_embed(),
+            view=view
         )
 
     @library.command(
@@ -155,19 +128,19 @@ class Library(commands.Cog):
         embed.add_field(
             name="📚 Most Pages",
             value=make_field(boards["pages"]),
-            inline=True
+            inline=False
         )
 
         embed.add_field(
             name="👑 First Claims",
             value=make_field(boards["claims"]),
-            inline=True
+            inline=False
         )
 
         embed.add_field(
             name="💰 Richest Players",
             value=make_field(boards["gold"], " GP"),
-            inline=True
+            inline=False
         )
 
         await interaction.followup.send(embed=embed)

@@ -3,18 +3,26 @@ from datetime import datetime, timedelta
 import discord
 
 import config
+from models.player_collection_progress import PlayerCollectionProgress
+from models.player_library_entry import PlayerLibraryEntry
+from models.player_library_view import PlayerLibraryView
+from models.player_profile_view import PlayerProfileView
 from models.schema.player import Player
 
 
 class PlayerService:
 
-    ROLL_RECHARGE = timedelta(seconds=config.ROLL_RECHARGE)
-    CLAIM_RECHARGE = timedelta(seconds=config.CLAIM_RECHARGE)
+    ROLL_RECHARGE = timedelta(hours=config.ROLL_RECHARGE)
+    CLAIM_RECHARGE = timedelta(hours=config.CLAIM_RECHARGE)
 
-    def __init__(self, bot, database, player_repository):
+    def __init__(self, bot, database, player_repository, inventory_repository, page_repository, collection_repository):
         self.bot = bot
         self.database = database
         self.player_repository = player_repository
+        self.inventory_repository = inventory_repository
+        self.page_repository = page_repository
+        self.collection_repository = collection_repository
+
 
     async def get_discord_user(
             self,
@@ -243,3 +251,171 @@ class PlayerService:
         )
 
         return True
+
+    async def get_profile(
+            self,
+            discord_user: discord.User | discord.Member
+    ) -> PlayerProfileView:
+
+        player = await self.get_active_player(
+            discord_user
+        )
+
+        async with self.database.transaction() as connection:
+            total_pages = await self.inventory_repository.count_total_player_pages(
+                player.discord_id,
+                connection
+            )
+
+            unique_pages = await self.inventory_repository.count_unique_pages(
+                player.discord_id,
+                connection
+            )
+
+            first_claims = await self.page_repository.count_first_claims(
+                player.discord_id,
+                connection
+            )
+
+            total_library_pages = await self.page_repository.count(
+                connection
+            )
+
+            return PlayerProfileView(
+                player=player,
+                total_pages=total_pages,
+                unique_pages=unique_pages,
+                first_claims=first_claims,
+                total_library_pages=total_library_pages,
+                completion_percentage=(
+                    (unique_pages / total_library_pages) * 100
+                    if total_library_pages > 0
+                    else 0
+                )
+            )
+
+    async def get_profile_if_exists(
+            self,
+            discord_user: discord.User | discord.Member
+    ) -> PlayerProfileView | None:
+
+        async with self.database.transaction() as connection:
+            player = await self.player_repository.get(
+                discord_user.id,
+                connection
+            )
+
+            if player is None:
+                return None
+
+            await self.refresh_player(
+                player,
+                connection
+            )
+
+            total_pages = await self.inventory_repository.count_total_player_pages(
+                player.discord_id,
+                connection
+            )
+
+            unique_pages = await self.inventory_repository.count_unique_pages(
+                player.discord_id,
+                connection
+            )
+
+            first_claims = await self.page_repository.count_first_claims(
+                player.discord_id,
+                connection
+            )
+
+            total_library_pages = await self.page_repository.count(
+                connection
+            )
+
+            completion_percentage = (
+                unique_pages / total_library_pages * 100
+                if total_library_pages > 0
+                else 0
+            )
+
+            return PlayerProfileView(
+                player=player,
+                total_pages=total_pages,
+                unique_pages=unique_pages,
+                first_claims=first_claims,
+                total_library_pages=total_library_pages,
+                completion_percentage=completion_percentage
+            )
+
+    async def get_collection_progress(
+            self,
+            discord_user: discord.User | discord.Member
+    ) -> list[PlayerCollectionProgress]:
+
+        async with self.database.transaction() as connection:
+            player = await self.get_or_create_player(
+                discord_user,
+                connection
+            )
+
+            await self.refresh_player(
+                player,
+                connection
+            )
+
+            progress = await self.collection_repository.get_player_progress(
+                player.discord_id,
+                connection
+            )
+
+            return [
+                PlayerCollectionProgress(
+                    collection_id=entry.collection_id,
+                    collection_name=entry.collection_name,
+
+                    total_pages=entry.total_pages,
+                    collected_pages=entry.collected_pages,
+                    claimed_pages=entry.claimed_pages,
+
+                    completion_percentage=(
+                        (entry.collected_pages / entry.total_pages) * 100
+                        if entry.total_pages > 0
+                        else 0
+                    )
+                )
+                for entry in progress
+            ]
+
+    async def get_player_library(
+            self,
+            discord_user: discord.User | discord.Member,
+            limit: int,
+            offset: int
+    ) -> PlayerLibraryView:
+
+        async with self.database.transaction() as connection:
+            player = await self.get_or_create_player(
+                discord_user,
+                connection
+            )
+
+            await self.refresh_player(
+                player,
+                connection
+            )
+
+            entries = await self.page_repository.get_player_library_entries(
+                owner_id=player.discord_id,
+                limit=limit,
+                offset=offset,
+                tx=connection
+            )
+
+            total_pages = await self.page_repository.count(
+                connection
+            )
+
+            return PlayerLibraryView(
+                entries=entries,
+                total_pages=total_pages
+            )

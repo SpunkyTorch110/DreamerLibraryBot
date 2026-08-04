@@ -55,7 +55,7 @@ class LibraryListView(discord.ui.View):
             )))
         )
 
-        lines = ["🔴 Undiscovered • 🟠 Discovered • 🟢 Claimed\n"]
+        lines = ["🔴 Undiscovered • 🟠 Discovered • 🟢 First Claimed\n"]
 
         for entry in self.entries[start:end]:
 

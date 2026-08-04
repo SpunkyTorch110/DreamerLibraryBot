@@ -75,6 +75,9 @@ class DreamerLibraryBot(commands.Bot):
             bot=self,
             database=self.database,
             player_repository=self.player_repository,
+            inventory_repository=self.inventory_repository,
+            page_repository=self.page_repository,
+            collection_repository=self.collection_repository,
         )
         self.library_service = LibraryService(
             database=self.database,

@@ -353,3 +353,21 @@ class PlayerRepository(BaseRepository):
         )
 
         return row["count"]
+
+    async def get_gold(
+            self,
+            discord_id: int,
+            tx=None
+    ) -> int:
+        row = await self.fetch_one(
+            """
+            SELECT gold
+            FROM players
+            WHERE discord_id = ?
+            """,
+            (discord_id,),
+            tx
+        )
+
+        return 0 if row is None else row[0]
+

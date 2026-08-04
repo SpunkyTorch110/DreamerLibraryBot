@@ -22,6 +22,9 @@ MAX_LEADERBOARD_PLAYERS = 5
 # amount of pages that appear per page in the list
 MAX_PAGES_PER_PAGE = 20
 
+# amount of collections shown in a single page of collections listing
+COLLECTION_PAGE_SIZE = 10
+
 # amount of pages to skip in gallery viewing
 GALLERY_JUMP_SIZE = 5
 

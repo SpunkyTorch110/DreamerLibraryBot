@@ -8,6 +8,7 @@ from enums.rarity import Rarity
 from models.gallery_page import GalleryPage
 from models.leaderboard_entry import LeaderboardEntry
 from models.library_page_entry import LibraryPageEntry
+from models.player_library_entry import PlayerLibraryEntry
 from models.schema.collection import Collection
 from models.schema.page import Page
 from models.schema.page_image import PageImage
@@ -575,3 +576,76 @@ class PageRepository(BaseRepository):
             )
 
         return gallery
+
+    async def count_first_claims(
+            self,
+            owner_id: int,
+            tx=None
+    ) -> int:
+        row = await self.fetch_one(
+            """
+            SELECT COUNT(*)
+            FROM pages
+            WHERE owner_id = ?
+            """,
+            (owner_id,),
+            tx
+        )
+
+        return row[0]
+
+    async def get_player_library_entries(
+            self,
+            owner_id: int,
+            limit: int,
+            offset: int,
+            tx=None
+    ) -> list[PlayerLibraryEntry]:
+        rows = await self.fetch_all(
+            """
+            SELECT p.id,
+                   p.name,
+                   p.rarity,
+                   p.discovered,
+                   p.owner_id,
+
+                   COALESCE(i.amount, 0) AS amount
+
+            FROM pages p
+
+                     LEFT JOIN inventory i
+                               ON i.page_id = p.id
+                                   AND i.player_id = ?
+
+            ORDER BY p.id LIMIT ?
+            OFFSET ?
+            """,
+            (
+                owner_id,
+                limit,
+                offset
+            ),
+            tx
+        )
+
+        return [
+            PlayerLibraryEntry(
+                page_id=row["id"],
+
+                discovered=bool(row["discovered"]),
+
+                name=row["name"],
+                rarity=(
+                    None
+                    if row["rarity"] is None
+                    else Rarity(row["rarity"])
+                ),
+
+                amount=row["amount"],
+
+                claimed=row["owner_id"] is not None,
+
+                original_owner=row["owner_id"] == owner_id
+            )
+            for row in rows
+        ]

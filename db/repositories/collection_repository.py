@@ -1,5 +1,7 @@
 from db.repositories.base_repository import BaseRepository
+from models import collection_progress
 from models.collection_progress import CollectionProgress
+from models.player_collection_progress import PlayerCollectionProgress
 
 from models.schema.collection import Collection
 
@@ -180,6 +182,58 @@ class CollectionRepository(BaseRepository):
                 collection_name=row["name"],
                 total_pages=row["total_pages"],
                 claimed_pages=row["claimed_pages"] or 0
+            )
+            for row in rows
+        ]
+
+    async def get_player_progress(
+            self,
+            discord_id: int,
+            tx=None
+    ) -> list[PlayerCollectionProgress]:
+        rows = await self.fetch_all(
+            """
+            SELECT c.id,
+                   c.name,
+
+                   COUNT(DISTINCT p.id)      AS total_pages,
+
+                   COUNT(DISTINCT i.page_id) AS collected_pages,
+
+                   COUNT(DISTINCT CASE
+                                      WHEN p.owner_id = ?
+                                          THEN p.id
+                       END)                  AS claimed_pages
+
+            FROM collections c
+
+                     JOIN pages p
+                          ON p.collection_id = c.id
+
+                     LEFT JOIN inventory i
+                               ON i.page_id = p.id
+                                   AND i.player_id = ?
+
+            GROUP BY c.id,
+                     c.name
+
+            ORDER BY c.name
+            """,
+            (
+                discord_id,
+                discord_id
+            ),
+            tx
+        )
+
+        return [
+            PlayerCollectionProgress(
+                collection_id=row["id"],
+                collection_name=row["name"],
+                total_pages=row["total_pages"],
+                collected_pages=row["collected_pages"],
+                claimed_pages=row["claimed_pages"],
+                completion_percentage=1
             )
             for row in rows
         ]
