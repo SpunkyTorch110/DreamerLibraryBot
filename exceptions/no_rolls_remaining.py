@@ -1,0 +1,2 @@
+class NoRollsRemaining(Exception):
+    pass

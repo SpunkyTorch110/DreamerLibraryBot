@@ -11,10 +11,11 @@ from db.repositories.page_alias_repository import PageAliasRepository
 from db.repositories.page_image_repository import PageImageRepository
 from db.repositories.page_repository import PageRepository
 from db.repositories.player_repository import PlayerRepository
-from services.AdminService import AdminService
-from services.LibraryService import LibraryService
-from services.PageService import PageService
-from services.PlayerService import PlayerService
+from services.admin_service import AdminService
+from services.library_service import LibraryService
+from services.page_service import PageService
+from services.player_service import PlayerService
+from services.roll_service import RollService
 
 
 class DreamerLibraryBot(commands.Bot):
@@ -31,6 +32,7 @@ class DreamerLibraryBot(commands.Bot):
     page_service: PageService
     player_service: PlayerService
     library_service: LibraryService
+    roll_service: RollService
 
     def __init__(self):
 
@@ -86,12 +88,22 @@ class DreamerLibraryBot(commands.Bot):
             collection_repository=self.collection_repository,
             inventory_repository=self.inventory_repository,
         )
+        self.roll_service = RollService(
+            database=self.database,
+            player_service=self.player_service,
+            player_repository=self.player_repository,
+            page_repository=self.page_repository,
+            collection_repository=self.collection_repository,
+            page_image_repository=self.page_image_repository,
+            inventory_repository=self.inventory_repository,
+        )
 
         await self.load_extension("cogs.ping")
         await self.load_extension("cogs.admin")
         await self.load_extension("cogs.library")
         await self.load_extension("cogs.pages")
         await self.load_extension("cogs.player")
+        await self.load_extension("cogs.roll")
 
         print("Syncing slash commands...")
         await self.tree.sync()

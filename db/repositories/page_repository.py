@@ -323,19 +323,16 @@ class PageRepository(BaseRepository):
     async def discover(
             self,
             page_id: int,
-            player_id: int,
             tx=None
     ):
         await self.execute(
             """
             UPDATE pages
-            SET discovered = 1,
-                owner_id   = ?
+            SET discovered = 1
             WHERE id = ?
             """,
             (
-                player_id,
-                page_id
+                page_id,
             ),
             tx
         )
@@ -649,3 +646,47 @@ class PageRepository(BaseRepository):
             )
             for row in rows
         ]
+
+    async def get_random_by_rarity(
+            self,
+            rarity: Rarity,
+            tx=None
+    ) -> Page | None:
+
+        row = await self.fetch_one(
+            """
+            SELECT *
+            FROM pages
+            WHERE rarity = ?
+            ORDER BY RANDOM() LIMIT 1
+            """,
+            (
+                int(rarity),
+            ),
+            tx
+        )
+
+        return None if row is None else self._map_row(row)
+
+    async def claim(
+            self,
+            page_id: int,
+            owner_id: int,
+            tx=None
+    ) -> bool:
+
+        cursor = await self.execute(
+            """
+            UPDATE pages
+            SET owner_id = ?
+            WHERE id = ?
+              AND owner_id IS NULL
+            """,
+            (
+                owner_id,
+                page_id
+            ),
+            tx
+        )
+
+        return cursor.rowcount == 1

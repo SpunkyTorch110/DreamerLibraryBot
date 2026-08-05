@@ -51,22 +51,22 @@ class PlayerPagesView(discord.ui.View):
 
     def build_embed(self):
 
-        lines = []
+        lines = ["🔴 Undiscovered • 🟠 Unclaimed • 🟢 Claimed • 👑 First Claim\n"]
 
         for page in self.entries:
 
             if not page.discovered:
 
                 lines.append(
-                    f"⚫ `{page.page_id:03}` "
+                    f"🔴 `{page.page_id:03}` "
                     f"Not Discovered"
                 )
 
                 continue
 
-            status = "🟢" if page.claimed else "🔴"
+            _status = "🟢" if page.claimed else "🟠"
 
-            crown = "(👑) " if page.original_owner else ""
+            status = "👑" if page.original_owner else _status
 
             rarity = "⭐" * int(page.rarity)
 
@@ -74,7 +74,7 @@ class PlayerPagesView(discord.ui.View):
                 f"{status} "
                 f"`{page.page_id:03}` "
                 f"{rarity} "
-                f"{page.name} {crown}"
+                f"{page.name} "
                 f"×{page.amount}"
             )
 

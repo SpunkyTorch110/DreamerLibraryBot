@@ -4,6 +4,8 @@ import discord
 import traceback
 
 from embeds.embed_factory import EmbedFactory
+from exceptions.no_claims_remaining import NoClaimsRemaining
+from exceptions.no_rolls_remaining import NoRollsRemaining
 from utils.colours import Colours
 
 
@@ -63,6 +65,34 @@ class DreamerCommandTree(app_commands.CommandTree):
                 title="Invalid Operation",
                 description=str(original),
                 colour=Colours.ERROR
+            )
+
+        # ------------------------------
+        # No rolls remaining
+        # ------------------------------
+        elif isinstance(original, NoRollsRemaining):
+
+            embed = EmbedFactory.create(
+                title="No Rolls Remaining",
+                description=(
+                    "You don't have any rolls remaining.\n"
+                    "Use **/player timers** to check when your next rolls recharge."
+                ),
+                colour=Colours.WARNING
+            )
+
+        # ------------------------------
+        # No claims remaining
+        # ------------------------------
+        elif isinstance(original, NoClaimsRemaining):
+
+            embed = EmbedFactory.create(
+                title="No Claims Remaining",
+                description=(
+                    "You don't have any claims remaining.\n"
+                    "Use **/player timers** to check when your next claim recharges."
+                ),
+                colour=Colours.WARNING
             )
 
         # ------------------------------

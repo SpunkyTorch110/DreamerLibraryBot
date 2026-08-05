@@ -1,6 +1,8 @@
 from dotenv import load_dotenv
 import os
 
+from enums.rarity import Rarity
+
 load_dotenv()
 
 # the discord bot token of your bot
@@ -45,3 +47,15 @@ STARTING_ROLLS = 3
 
 # amount of claims the players starts with initially
 STARTING_CLAIMS = 1
+
+# sell values of each star type
+ROLL_SELL_VALUES = {
+    Rarity.SINGLE_STAR: 2,
+    Rarity.DOUBLE_STAR: 5,
+    Rarity.TRIPLE_STAR: 10,
+}
+
+# drop chances to get the rarities while rolling
+SINGLE_STAR_DROP_CHANCE = 50
+DOUBLE_STAR_DROP_CHANCE = 35
+TRIPLE_STAR_DROP_CHANCE = 15

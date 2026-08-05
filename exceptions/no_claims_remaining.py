@@ -1,0 +1,2 @@
+class NoClaimsRemaining(Exception):
+    pass
