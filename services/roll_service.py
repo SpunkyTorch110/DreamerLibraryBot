@@ -42,7 +42,7 @@ class RollService:
             # Player
             #
 
-            player = await self.player_service.get_or_create_player(
+            player: Player = await self.player_service.get_or_create_player(
                 discord_user,
                 connection
             )
@@ -118,13 +118,14 @@ class RollService:
                 page=page,
                 collection=collection,
                 image=image,
-                player=player
+                player=player,
+                claims_remaining=player.claims_remaining,
             )
 
     async def claim(
             self,
-            player: Player,
-            page: Page
+            player_id: int,
+            page_id: int
     ):
 
         async with self.database.transaction() as connection:
@@ -132,6 +133,22 @@ class RollService:
             #
             # Refresh player
             #
+
+            player = await self.player_service.get_or_create_player(
+                await self.player_service.get_discord_user(player_id),
+                connection
+            )
+
+            if player is None:
+                raise RuntimeError("Player not found.")
+
+            page = await self.page_repository.get(
+                page_id,
+                connection
+            )
+
+            if page is None:
+                raise RuntimeError("Page not found.")
 
             await self.player_service.refresh_player(
                 player,
@@ -176,17 +193,16 @@ class RollService:
 
     async def sell(
             self,
-            player: Player,
+            player_id: int,
             rarity: Rarity
-    ):
+    ) -> int:
 
         async with self.database.transaction() as connection:
             gold = config.ROLL_SELL_VALUES[rarity]
 
-            player.gold += gold
-
-            await self.player_repository.update(
-                player,
+            await self.player_repository.add_gold(
+                player_id,
+                gold,
                 connection
             )
 

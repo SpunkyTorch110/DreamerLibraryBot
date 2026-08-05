@@ -370,4 +370,3 @@ class PlayerRepository(BaseRepository):
         )
 
         return 0 if row is None else row[0]
-

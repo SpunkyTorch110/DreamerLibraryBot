@@ -104,6 +104,8 @@ class DreamerLibraryBot(commands.Bot):
         await self.load_extension("cogs.pages")
         await self.load_extension("cogs.player")
         await self.load_extension("cogs.roll")
+        await self.load_extension("cogs.help")
+        await self.load_extension("cogs.bot")
 
         print("Syncing slash commands...")
         await self.tree.sync()
@@ -111,6 +113,13 @@ class DreamerLibraryBot(commands.Bot):
         print("DreamerLibraryBot is ready.")
 
     async def on_ready(self):
+        await self.change_presence(
+            activity=discord.CustomActivity(
+                name=config.DISCORD_STATUS
+            ),
+            status=discord.Status.online
+        )
+
         print(f"Logged in as {self.user}")
 
 async def main():

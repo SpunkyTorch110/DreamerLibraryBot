@@ -640,7 +640,7 @@ class PageRepository(BaseRepository):
 
                 amount=row["amount"],
 
-                claimed=row["owner_id"] is not None,
+                claimed=row["amount"] > 0,
 
                 original_owner=row["owner_id"] == owner_id
             )

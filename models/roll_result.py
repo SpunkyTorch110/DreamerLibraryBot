@@ -16,3 +16,5 @@ class RollResult:
     image: PageImage
 
     player: Player
+
+    claims_remaining: int

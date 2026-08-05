@@ -3,6 +3,7 @@ from discord import app_commands
 import discord
 
 from embeds.embed_factory import EmbedFactory
+from modals.leaderboard_view import LeaderboardView
 from modals.library_collections_view import LibraryCollectionsView
 from utils.colours import Colours
 
@@ -104,46 +105,15 @@ class Library(commands.Cog):
 
         boards = await self.bot.library_service.get_leaderboards()
 
-        embed = EmbedFactory.create(
-            title="🏆 DREAMER Library Leaderboards",
-            colour=Colours.INFO
+        view = LeaderboardView(
+            bot=self.bot,
+            boards=boards
         )
 
-        embed.set_thumbnail(
-            url=self.bot.user.display_avatar.url
+        await interaction.followup.send(
+            embed=view.build_embed(),
+            view=view
         )
-
-        medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
-
-        def make_field(entries, suffix=""):
-            lines = []
-
-            for medal, entry in zip(medals, entries):
-                lines.append(
-                    f"{medal} **{entry.username}** — {entry.value:,}{suffix}"
-                )
-
-            return "\n".join(lines) if lines else "*No data.*"
-
-        embed.add_field(
-            name="📚 Most Pages",
-            value=make_field(boards["pages"]),
-            inline=False
-        )
-
-        embed.add_field(
-            name="👑 First Claims",
-            value=make_field(boards["claims"]),
-            inline=False
-        )
-
-        embed.add_field(
-            name="💰 Richest Players",
-            value=make_field(boards["gold"], " GP"),
-            inline=False
-        )
-
-        await interaction.followup.send(embed=embed)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Library(bot))

@@ -18,6 +18,12 @@ ADMIN_IDS = {
 # the location and name of the database file for the bots data
 DATABASE = "data/dreamerlibrarybot.db"
 
+# the id of the bot creator
+BOT_CREATOR = os.getenv("BOT_CREATOR")
+
+# status on the discord bot
+DISCORD_STATUS = "v1.0 | Use /roll to start"
+
 # amount of players shown in the leaderboard
 MAX_LEADERBOARD_PLAYERS = 5
 
