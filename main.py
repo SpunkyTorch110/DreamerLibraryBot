@@ -11,11 +11,13 @@ from db.repositories.page_alias_repository import PageAliasRepository
 from db.repositories.page_image_repository import PageImageRepository
 from db.repositories.page_repository import PageRepository
 from db.repositories.player_repository import PlayerRepository
+from db.repositories.upgrade_repository import UpgradeRepository
 from services.admin_service import AdminService
 from services.library_service import LibraryService
 from services.page_service import PageService
 from services.player_service import PlayerService
 from services.roll_service import RollService
+from services.upgrade_service import UpgradeService
 
 
 class DreamerLibraryBot(commands.Bot):
@@ -27,12 +29,14 @@ class DreamerLibraryBot(commands.Bot):
     page_alias_repository: PageAliasRepository
     page_image_repository: PageImageRepository
     inventory_repository: InventoryRepository
+    upgrade_repository: UpgradeRepository
 
     admin_service: AdminService
     page_service: PageService
     player_service: PlayerService
     library_service: LibraryService
     roll_service: RollService
+    upgrade_service: UpgradeService
 
     def __init__(self):
 
@@ -57,6 +61,7 @@ class DreamerLibraryBot(commands.Bot):
         self.page_alias_repository = PageAliasRepository(self.database)
         self.page_image_repository = PageImageRepository(self.database)
         self.inventory_repository = InventoryRepository(self.database)
+        self.upgrade_repository = UpgradeRepository(self.database)
 
         # Services
         self.admin_service = AdminService(
@@ -80,6 +85,9 @@ class DreamerLibraryBot(commands.Bot):
             inventory_repository=self.inventory_repository,
             page_repository=self.page_repository,
             collection_repository=self.collection_repository,
+            page_image_repository=self.page_image_repository,
+            upgrade_repository=self.upgrade_repository,
+            upgrade_service=self.upgrade_service,
         )
         self.library_service = LibraryService(
             database=self.database,
@@ -96,6 +104,12 @@ class DreamerLibraryBot(commands.Bot):
             collection_repository=self.collection_repository,
             page_image_repository=self.page_image_repository,
             inventory_repository=self.inventory_repository,
+        )
+        self.upgrade_service = UpgradeService(
+            database=self.database,
+            player_service=self.player_service,
+            player_repository=self.player_repository,
+            upgrade_repository=self.upgrade_repository,
         )
 
         await self.load_extension("cogs.ping")

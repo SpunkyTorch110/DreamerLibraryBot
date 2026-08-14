@@ -3,25 +3,28 @@ from datetime import datetime, timedelta
 import discord
 
 import config
+from models.page_view import PageView
 from models.player_collection_progress import PlayerCollectionProgress
-from models.player_library_entry import PlayerLibraryEntry
+from models.player_gallery_page_view import PlayerGalleryPageView
 from models.player_library_view import PlayerLibraryView
 from models.player_profile_view import PlayerProfileView
 from models.schema.player import Player
+from models.schema.player_upgrades import PlayerUpgrades
 
 
 class PlayerService:
 
-    ROLL_RECHARGE = timedelta(hours=config.ROLL_RECHARGE)
-    CLAIM_RECHARGE = timedelta(hours=config.CLAIM_RECHARGE)
-
-    def __init__(self, bot, database, player_repository, inventory_repository, page_repository, collection_repository):
+    def __init__(self, bot, database, player_repository, inventory_repository, page_repository, collection_repository, page_image_repository,
+                 upgrade_repository, upgrade_service):
         self.bot = bot
         self.database = database
         self.player_repository = player_repository
         self.inventory_repository = inventory_repository
         self.page_repository = page_repository
         self.collection_repository = collection_repository
+        self.page_image_repository = page_image_repository
+        self.upgrade_repository = upgrade_repository
+        self.upgrade_service = upgrade_service
 
 
     async def get_discord_user(
@@ -52,46 +55,64 @@ class PlayerService:
             connection=None
     ) -> Player:
 
+        #
+        # Check if player already exists
+        #
+
         player = await self.player_repository.get(
             discord_user.id,
             connection
         )
 
-        if player is not None:
-            return player
+        #
+        # Create player if necessary
+        #
 
-        now = datetime.now()
+        if player is None:
+            player = Player(
+                discord_id=discord_user.id,
 
-        player = Player(
-            discord_id=discord_user.id,
+                username=discord_user.name,
+                display_name=discord_user.display_name,
 
-            username=discord_user.name,
-            display_name=discord_user.display_name,
+                gold=0,
 
-            gold=0,
+                rolls_remaining=3,
+                claims_remaining=1,
 
-            rolls_remaining=config.STARTING_ROLLS,
-            claims_remaining=config.STARTING_CLAIMS,
+                next_roll_at=None,
+                next_claim_at=None,
 
-            next_roll_at=(
-                None
-                if config.STARTING_ROLLS == config.MAX_ROLLS
-                else now + timedelta(hours=config.ROLL_RECHARGE)
-            ),
+                created_at=datetime.now()
+            )
 
-            next_claim_at=(
-                None
-                if config.STARTING_CLAIMS == config.MAX_CLAIMS
-                else now + timedelta(hours=config.CLAIM_RECHARGE)
-            ),
+            await self.player_repository.create(
+                player,
+                connection
+            )
 
-            created_at=now
-        )
+        #
+        # Make sure the player has an upgrades record.
+        #
+        # This is important because players may have existed
+        # before the upgrades system was introduced.
+        #
 
-        await self.player_repository.create(
-            player,
+        upgrades = await self.upgrade_repository.get(
+            player.discord_id,
             connection
         )
+
+        if upgrades is None:
+            await self.upgrade_repository.create(
+                PlayerUpgrades(
+                    player_id=player.discord_id,
+
+                    roll_upgraded=False,
+                    claim_upgraded=False
+                ),
+                connection
+            )
 
         return player
 
@@ -121,7 +142,13 @@ class PlayerService:
             if player.rolls_remaining == config.MAX_ROLLS:
                 player.next_roll_at = None
             else:
-                player.next_roll_at += self.ROLL_RECHARGE
+
+                recharge = await self.get_roll_recharge(
+                    player.discord_id,
+                    connection
+                )
+
+                player.next_roll_at += recharge
 
         #
         # Claims
@@ -139,7 +166,13 @@ class PlayerService:
             if player.claims_remaining == config.MAX_CLAIMS:
                 player.next_claim_at = None
             else:
-                player.next_claim_at += self.CLAIM_RECHARGE
+
+                recharge = await self.get_claim_recharge(
+                    player.discord_id,
+                    connection
+                )
+
+                player.next_claim_at += recharge
 
         if updated:
             await self.player_repository.update(
@@ -193,25 +226,19 @@ class PlayerService:
             player: Player,
             connection=None
     ) -> bool:
-        """
-        Attempts to consume one roll.
-
-        Returns:
-            True if a roll was consumed.
-            False if the player has no rolls remaining.
-        """
 
         if player.rolls_remaining <= 0:
             return False
 
         player.rolls_remaining -= 1
 
-        #
-        # Start the recharge timer only when leaving the "full" state.
-        #
-
         if player.next_roll_at is None:
-            player.next_roll_at = datetime.now() + self.ROLL_RECHARGE
+            recharge = await self.get_roll_recharge(
+                player.discord_id,
+                connection
+            )
+
+            player.next_roll_at = datetime.now() + recharge
 
         await self.player_repository.update(
             player,
@@ -225,25 +252,19 @@ class PlayerService:
             player: Player,
             connection=None
     ) -> bool:
-        """
-        Attempts to consume one claim.
-
-        Returns:
-            True if a claim was consumed.
-            False if the player has no claims remaining.
-        """
 
         if player.claims_remaining <= 0:
             return False
 
         player.claims_remaining -= 1
 
-        #
-        # Start the recharge timer only when leaving the "full" state.
-        #
-
         if player.next_claim_at is None:
-            player.next_claim_at = datetime.now() + self.CLAIM_RECHARGE
+            recharge = await self.get_claim_recharge(
+                player.discord_id,
+                connection
+            )
+
+            player.next_claim_at = datetime.now() + recharge
 
         await self.player_repository.update(
             player,
@@ -390,7 +411,8 @@ class PlayerService:
             self,
             discord_user: discord.User | discord.Member,
             limit: int,
-            offset: int
+            offset: int,
+            collection_id: int | None = None
     ) -> PlayerLibraryView:
 
         async with self.database.transaction() as connection:
@@ -408,14 +430,148 @@ class PlayerService:
                 owner_id=player.discord_id,
                 limit=limit,
                 offset=offset,
+                collection_id=collection_id,
                 tx=connection
             )
 
-            total_pages = await self.page_repository.count(
-                connection
+            total_pages = await self.page_repository.count_player_library_entries(
+                owner_id=player.discord_id,
+                collection_id=collection_id,
+                tx=connection
             )
 
             return PlayerLibraryView(
                 entries=entries,
                 total_pages=total_pages
             )
+
+    async def get_player_gallery_entries(
+            self,
+            discord_user: discord.User | discord.Member,
+            limit: int,
+            offset: int
+    ) -> tuple[list[PlayerGalleryPageView], int]:
+
+        async with self.database.transaction() as connection:
+            #
+            # Make sure the player has a profile.
+            #
+
+            player = await self.get_or_create_player(
+                discord_user,
+                connection
+            )
+
+            #
+            # Get the player's owned pages.
+            #
+
+            entries = await self.page_repository.get_player_gallery_entries(
+                player_id=player.discord_id,
+                limit=limit,
+                offset=offset,
+                tx=connection
+            )
+
+            #
+            # Get the total number of unique pages owned.
+            #
+
+            total = await self.page_repository.count_player_gallery_pages(
+                player_id=player.discord_id,
+                tx=connection
+            )
+
+            return entries, total
+
+    async def get_player_gallery_page(
+            self,
+            discord_user: discord.User | discord.Member,
+            page_id: int
+    ) -> PageView | None:
+
+        async with self.database.transaction() as connection:
+
+            player = await self.get_or_create_player(
+                discord_user,
+                connection
+            )
+
+            entry = await self.page_repository.get_player_gallery_page(
+                player_id=player.discord_id,
+                page_id=page_id,
+                tx=connection
+            )
+
+            if entry is None:
+                return None
+
+            page = await self.page_repository.get(
+                entry.page_id,
+                connection
+            )
+
+            if page is None:
+                return None
+
+            collection = await self.collection_repository.get(
+                page.collection_id,
+                connection
+            )
+
+            image = await self.page_image_repository.get_main_image(
+                page.id,
+                connection
+            )
+
+            return PageView(
+                page=page,
+                collection=collection,
+                image=image,
+                amount=entry.amount
+            )
+
+    async def get_player_recharge_times(
+            self,
+            player_id: int,
+            connection=None
+    ) -> tuple[timedelta, timedelta]:
+
+        upgrades = await self.upgrade_repository.get(
+            player_id,
+            connection
+        )
+
+        roll_recharge = (
+            config.ROLL_RECHARGE_UPGRADED
+            if upgrades and upgrades.roll_upgraded
+            else config.ROLL_RECHARGE
+        )
+
+        claim_recharge = (
+            config.CLAIM_RECHARGE_UPGRADED
+            if upgrades and upgrades.claim_upgraded
+            else config.CLAIM_RECHARGE
+        )
+
+        return roll_recharge, claim_recharge
+
+    async def get_roll_recharge(
+            self,
+            player_id: int,
+            connection=None
+    ):
+        return await self.upgrade_service.get_roll_recharge(
+            player_id,
+            connection
+        )
+
+    async def get_claim_recharge(
+            self,
+            player_id: int,
+            connection=None
+    ):
+        return await self.upgrade_service.get_claim_recharge(
+            player_id,
+            connection
+        )

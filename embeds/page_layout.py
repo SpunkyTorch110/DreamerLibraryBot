@@ -12,9 +12,15 @@ from models.schema.page_image import PageImage
 from utils.colours import Colours
 
 
-def create_page_embed(page: Page, collect: Collection, page_image: PageImage,
-                      total_pages: int, original_owner: discord.abc.User | None = None,
-                      hide_stats: bool = False) -> Embed:
+def create_page_embed(
+        page: Page,
+        collect: Collection,
+        page_image: PageImage,
+        total_pages: int,
+        original_owner: discord.abc.User | None = None,
+        hide_stats: bool = False,
+        owned_amount: int | None = None
+) -> Embed:
 
     collection_name = collect.name if collect else "Unknown"
 
@@ -40,8 +46,13 @@ def create_page_embed(page: Page, collect: Collection, page_image: PageImage,
 
     stat_prefix = "+" if page.page_type != PageType.CHARACTER else ""
 
+    title = page.name
+
+    if owned_amount is not None:
+        title += f" ×{owned_amount}"
+
     embed = EmbedFactory.create(
-        title=f"{page.name}",
+        title=title,
         description=(
             "(Claim this page to learn more about it)"
             if hide_stats
@@ -61,7 +72,6 @@ def create_page_embed(page: Page, collect: Collection, page_image: PageImage,
             icon_url="https://cdn.discordapp.com/embed/avatars/0.png"
         )
 
-    # Top information
     embed.add_field(
         name="Gender",
         value=gender_emoji,
@@ -80,7 +90,6 @@ def create_page_embed(page: Page, collect: Collection, page_image: PageImage,
         inline=True
     )
 
-    # First stat row
     if not hide_stats:
         embed.add_field(
             name="💪 STR",
@@ -100,7 +109,6 @@ def create_page_embed(page: Page, collect: Collection, page_image: PageImage,
             inline=True
         )
 
-        # Second stat row
         embed.add_field(
             name="🧠 INT",
             value=f"**{stat_prefix}{page.intelligence}**",
@@ -119,10 +127,16 @@ def create_page_embed(page: Page, collect: Collection, page_image: PageImage,
             inline=True
         )
 
-    embed.set_image(url=page_image.image_url)
+    embed.set_image(
+        url=page_image.image_url
+    )
 
     embed.set_footer(
-        text=f"Collection: {collection_name} • {page.page_type.name.title()} • Page Number {page.id}/{total_pages}"
+        text=(
+            f"Collection: {collection_name} • "
+            f"{page.page_type.name.title()} • "
+            f"Page Number {page.id}/{total_pages}"
+        )
     )
 
     return embed

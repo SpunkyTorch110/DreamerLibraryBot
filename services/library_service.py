@@ -103,5 +103,9 @@ class LibraryService:
                 "gold": await self.player_repository.get_top_gold(
                     max_players,
                     connection=connection
+                ),
+                "completion": await self.player_repository.get_completion_leaderboard(
+                    max_players,
+                    tx=connection
                 )
             }

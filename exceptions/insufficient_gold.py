@@ -1,0 +1,2 @@
+class InsufficientGold(Exception):
+    pass

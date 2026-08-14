@@ -195,7 +195,7 @@ class RollService:
             self,
             player_id: int,
             rarity: Rarity
-    ) -> int:
+    ) -> tuple[int, int]:
 
         async with self.database.transaction() as connection:
             gold = config.ROLL_SELL_VALUES[rarity]
@@ -206,4 +206,12 @@ class RollService:
                 connection
             )
 
-            return gold
+            player = await self.player_repository.get(
+                player_id,
+                connection
+            )
+
+            if player is None:
+                raise RuntimeError("Player not found.")
+
+            return gold, player.gold

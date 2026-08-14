@@ -158,7 +158,7 @@ class RollView(discord.ui.View):
         if self.finished:
             return
 
-        gold = await self.bot.roll_service.sell(
+        gold, total_gold = await self.bot.roll_service.sell(
             self.result.player.discord_id,
             self.result.page.rarity
         )
@@ -175,7 +175,8 @@ class RollView(discord.ui.View):
             ),
             description=(
                 f"You sold **{self.result.page.name}** "
-                f"for a total of **{gold} GP**."
+                f"for a total of **{gold} GP**.\n\n"
+                f"💰 Your current balance is **{total_gold:,} GP**."
             ),
             colour=Colours.SUCCESS
         )

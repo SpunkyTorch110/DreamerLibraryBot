@@ -14,12 +14,17 @@ class PlayerPagesView(discord.ui.View):
     def __init__(
             self,
             bot,
-            user: discord.User | discord.Member
+            user: discord.User | discord.Member,
+            collection_id: int | None = None,
+            collection_name: str | None = None
     ):
         super().__init__(timeout=300)
 
         self.bot = bot
         self.user = user
+
+        self.collection_id = collection_id
+        self.collection_name = collection_name
 
         self.page = 0
 
@@ -34,7 +39,8 @@ class PlayerPagesView(discord.ui.View):
         library = await self.bot.player_service.get_player_library(
             self.user,
             self.PAGE_SIZE,
-            self.page * self.PAGE_SIZE
+            self.page * self.PAGE_SIZE,
+            collection_id=self.collection_id
         )
 
         self.entries = library.entries
@@ -79,7 +85,12 @@ class PlayerPagesView(discord.ui.View):
             )
 
         embed = EmbedFactory.create(
-            title=f"📖 {self.user.display_name}'s Pages",
+            title=(
+                f"📖 {self.user.display_name}'s "
+                f"{self.collection_name} Pages"
+                if self.collection_name
+                else f"📖 {self.user.display_name}'s Pages"
+            ),
             description="\n".join(lines),
             colour=Colours.INFO
         )

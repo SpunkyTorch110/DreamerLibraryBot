@@ -1,0 +1,2 @@
+class UpgradeAlreadyPurchased(Exception):
+    pass

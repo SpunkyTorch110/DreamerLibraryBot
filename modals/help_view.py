@@ -1,5 +1,6 @@
 import discord
 
+import config
 from embeds.embed_factory import EmbedFactory
 from utils.colours import Colours
 
@@ -60,9 +61,9 @@ class HelpView(discord.ui.View):
 
                     "## ⭐ Roll Chances\n"
 
-                    "⭐ Common — **50%**\n"
-                    "⭐⭐ Rare — **35%**\n"
-                    "⭐⭐⭐ Legendary — **15%**"
+                    f"⭐ Common — **{config.SINGLE_STAR_DROP_CHANCE}%**\n"
+                    f"⭐⭐ Rare — **{config.DOUBLE_STAR_DROP_CHANCE}%**\n"
+                    f"⭐⭐⭐ Legendary — **{config.TRIPLE_STAR_DROP_CHANCE}%**"
                 )
 
                 embed.set_footer(
@@ -158,6 +159,12 @@ class HelpView(discord.ui.View):
                     inline=False
                 )
 
+                embed.add_field(
+                    name="(NEW) /pages collection",
+                    value="Browse the pages of a specific collection.",
+                    inline=False
+                )
+
             #
             # Player
             #
@@ -197,6 +204,12 @@ class HelpView(discord.ui.View):
                 embed.add_field(
                     name="/player timers",
                     value="Shows your remaining Rolls and Claims.",
+                    inline=False
+                )
+
+                embed.add_field(
+                    name="(NEW) /player gallery",
+                    value="Browse every page one by one in your gallery.",
                     inline=False
                 )
 

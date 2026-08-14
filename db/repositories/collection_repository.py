@@ -237,3 +237,33 @@ class CollectionRepository(BaseRepository):
             )
             for row in rows
         ]
+
+    async def find_by_name(
+            self,
+            name: str,
+            tx=None
+    ) -> Collection | None:
+        row = await self.fetch_one(
+            """
+            SELECT id,
+                   name,
+                   description,
+                   image_url
+            FROM collections
+            WHERE LOWER(name) = LOWER(?) LIMIT 1
+            """,
+            (
+                name,
+            ),
+            tx
+        )
+
+        if row is None:
+            return None
+
+        return Collection(
+            id=row["id"],
+            name=row["name"],
+            description=row["description"],
+            image_url=row["image_url"]
+        )

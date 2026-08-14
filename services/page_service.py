@@ -88,3 +88,24 @@ class PageService:
             return await self.page_repository.get_gallery_pages(
                 connection
             )
+
+    async def get_library_entries_by_collection(
+            self,
+            collection_name: str
+    ) -> tuple[str, list[LibraryPageEntry]] | None:
+
+        async with self.database.transaction() as connection:
+            collection = await self.collection_repository.find_by_name(
+                collection_name,
+                connection
+            )
+
+            if collection is None:
+                return None
+
+            entries = await self.page_repository.get_library_entries_by_collection(
+                collection.id,
+                connection
+            )
+
+            return collection.name, entries

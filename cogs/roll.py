@@ -2,6 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from checks.admin_check import is_admin
 from modals.roll_view import RollView
 
 

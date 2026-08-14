@@ -9,5 +9,9 @@ from models.schema.page_image import PageImage
 class PageView:
 
     page: Page
-    collection: Collection | None
+
+    collection: Collection
+
     image: PageImage | None
+
+    amount: int = 0

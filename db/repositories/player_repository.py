@@ -370,3 +370,49 @@ class PlayerRepository(BaseRepository):
         )
 
         return 0 if row is None else row[0]
+
+    async def get_completion_leaderboard(
+            self,
+            limit: int = 5,
+            tx=None
+    ):
+        rows = await self.fetch_all(
+            """
+            SELECT p.discord_id,
+                   p.username,
+
+                   COALESCE(
+                           COUNT(DISTINCT i.page_id) * 100.0
+                               / NULLIF(
+                                   (SELECT COUNT(*) FROM pages),
+                                   0
+                                 ),
+                           0
+                   ) AS completion_percentage
+
+            FROM players p
+
+                     LEFT JOIN inventory i
+                               ON i.player_id = p.discord_id
+                                   AND i.amount > 0
+
+            GROUP BY p.discord_id,
+                     p.username
+
+            ORDER BY completion_percentage DESC,
+                     p.discord_id ASC LIMIT ?
+            """,
+            (
+                limit,
+            ),
+            tx
+        )
+
+        return [
+            LeaderboardEntry(
+                discord_id=row["discord_id"],
+                username=row["username"],
+                value=row["completion_percentage"]
+            )
+            for row in rows
+        ]

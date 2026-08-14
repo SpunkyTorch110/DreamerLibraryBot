@@ -8,6 +8,7 @@ from enums.rarity import Rarity
 from models.gallery_page import GalleryPage
 from models.leaderboard_entry import LeaderboardEntry
 from models.library_page_entry import LibraryPageEntry
+from models.player_gallery_page_view import PlayerGalleryPageView
 from models.player_library_entry import PlayerLibraryEntry
 from models.schema.collection import Collection
 from models.schema.page import Page
@@ -596,8 +597,10 @@ class PageRepository(BaseRepository):
             owner_id: int,
             limit: int,
             offset: int,
+            collection_id: int | None = None,
             tx=None
     ) -> list[PlayerLibraryEntry]:
+
         rows = await self.fetch_all(
             """
             SELECT p.id,
@@ -614,11 +617,18 @@ class PageRepository(BaseRepository):
                                ON i.page_id = p.id
                                    AND i.player_id = ?
 
+            WHERE (
+                      ? IS NULL
+                          OR p.collection_id = ?
+                      )
+
             ORDER BY p.id LIMIT ?
             OFFSET ?
             """,
             (
                 owner_id,
+                collection_id,
+                collection_id,
                 limit,
                 offset
             ),
@@ -632,6 +642,7 @@ class PageRepository(BaseRepository):
                 discovered=bool(row["discovered"]),
 
                 name=row["name"],
+
                 rarity=(
                     None
                     if row["rarity"] is None
@@ -640,9 +651,13 @@ class PageRepository(BaseRepository):
 
                 amount=row["amount"],
 
-                claimed=row["amount"] > 0,
+                # This should mean "claimed by anyone"
+                claimed=row["owner_id"] is not None,
 
-                original_owner=row["owner_id"] == owner_id
+                # This means "this player was the first claimant"
+                original_owner=(
+                        row["owner_id"] == owner_id
+                )
             )
             for row in rows
         ]
@@ -690,3 +705,210 @@ class PageRepository(BaseRepository):
         )
 
         return cursor.rowcount == 1
+
+    async def get_player_gallery_entries(
+            self,
+            player_id: int,
+            limit: int,
+            offset: int,
+            tx=None
+    ) -> list[PlayerGalleryPageView]:
+
+        rows = await self.fetch_all(
+            """
+            SELECT p.id,
+                   p.name,
+                   p.rarity,
+                   p.discovered,
+                   p.owner_id,
+
+                   i.amount
+
+            FROM pages p
+
+                     INNER JOIN inventory i
+                                ON i.page_id = p.id
+                                    AND i.player_id = ?
+
+            WHERE i.amount > 0
+
+            ORDER BY p.id LIMIT ?
+            OFFSET ?
+            """,
+            (
+                player_id,
+                limit,
+                offset
+            ),
+            tx
+        )
+
+        return [
+            PlayerGalleryPageView(
+                page_id=row["id"],
+
+                discovered=bool(row["discovered"]),
+
+                name=row["name"],
+                rarity=(
+                    None
+                    if row["rarity"] is None
+                    else Rarity(row["rarity"])
+                ),
+
+                amount=row["amount"],
+
+                claimed=row["owner_id"] is not None,
+
+                original_owner=(
+                        row["owner_id"] == player_id
+                )
+            )
+            for row in rows
+        ]
+
+    async def count_player_library_entries(
+            self,
+            owner_id: int,
+            collection_id: int | None = None,
+            tx=None
+    ) -> int:
+
+        row = await self.fetch_one(
+            """
+            SELECT COUNT(*)
+            FROM pages p
+
+            WHERE (
+                      ? IS NULL
+                          OR p.collection_id = ?
+                      )
+            """,
+            (
+                collection_id,
+                collection_id
+            ),
+            tx
+        )
+
+        return row[0]
+
+    async def count_player_gallery_pages(
+            self,
+            player_id: int,
+            tx=None
+    ) -> int:
+
+        row = await self.fetch_one(
+            """
+            SELECT COUNT(*)
+            FROM inventory
+            WHERE player_id = ?
+              AND amount > 0
+            """,
+            (
+                player_id,
+            ),
+            tx
+        )
+
+        return row[0]
+
+    async def get_player_gallery_page(
+            self,
+            player_id: int,
+            page_id: int,
+            tx=None
+    ) -> PlayerGalleryPageView | None:
+
+        row = await self.fetch_one(
+            """
+            SELECT p.id,
+                   p.name,
+                   p.rarity,
+                   p.discovered,
+                   p.owner_id,
+
+                   i.amount
+
+            FROM pages p
+
+                     INNER JOIN inventory i
+                                ON i.page_id = p.id
+                                    AND i.player_id = ?
+
+            WHERE p.id = ?
+              AND i.amount > 0
+            """,
+            (
+                player_id,
+                page_id
+            ),
+            tx
+        )
+
+        if row is None:
+            return None
+
+        return PlayerGalleryPageView(
+            page_id=row["id"],
+
+            discovered=bool(row["discovered"]),
+
+            name=row["name"],
+
+            rarity=(
+                None
+                if row["rarity"] is None
+                else Rarity(row["rarity"])
+            ),
+
+            amount=row["amount"],
+
+            claimed=row["owner_id"] is not None,
+
+            original_owner=(
+                    row["owner_id"] == player_id
+            )
+        )
+
+    async def get_library_entries_by_collection(
+            self,
+            collection_id: int,
+            tx=None
+    ) -> list[LibraryPageEntry]:
+
+        rows = await self.fetch_all(
+            """
+            SELECT p.id,
+                   p.name,
+                   p.rarity,
+                   p.discovered,
+                   p.owner_id
+
+            FROM pages p
+
+            WHERE p.collection_id = ?
+
+            ORDER BY p.id
+            """,
+            (
+                collection_id,
+            ),
+            tx
+        )
+
+        return [
+            LibraryPageEntry(
+                id=row["id"],
+                name=row["name"],
+                rarity=(
+                    None
+                    if row["rarity"] is None
+                    else Rarity(row["rarity"])
+                ),
+                discovered=bool(row["discovered"]),
+                claimed=row["owner_id"] is not None
+            )
+            for row in rows
+        ]

@@ -6,6 +6,7 @@ from datetime import datetime
 import config
 from embeds.embed_factory import EmbedFactory
 from modals.collection_progress_view import CollectionProgressView
+from modals.player_gallery_view import PlayerGalleryView
 from modals.player_pages_view import PlayerPagesView
 from models.player_profile_view import PlayerProfileView
 from utils.colours import Colours
@@ -97,11 +98,16 @@ class Player(commands.Cog):
             interaction: discord.Interaction
     ):
 
-        await interaction.response.defer(
-        )
+        await interaction.response.defer()
 
         player = await self.bot.player_service.get_active_player(
             interaction.user
+        )
+
+        roll_recharge, claim_recharge = (
+            await self.bot.player_service.get_player_recharge_times(
+                player.discord_id
+            )
         )
 
         embed = EmbedFactory.create(
@@ -137,11 +143,14 @@ class Player(commands.Cog):
         )
 
         embed.set_footer(
-            text=f"Rolls regenerate every {config.ROLL_RECHARGE} hours • Claims regenerate every {config.CLAIM_RECHARGE} hours"
+            text=(
+                f"Rolls regenerate every {roll_recharge.total_seconds() / 3600} hours "
+                f"• Claims regenerate every {claim_recharge.total_seconds() / 3600} hours"
+            )
         )
 
         await interaction.followup.send(
-            embed=embed,
+            embed=embed
         )
 
     @player.command(
@@ -237,23 +246,148 @@ class Player(commands.Cog):
 
     @player.command(
         name="pages",
-        description="Shows every page in your personal book."
+        description="Shows the pages in your personal book."
+    )
+    @app_commands.describe(
+        collection="Optional collection to filter your pages by."
     )
     async def pages(
+            self,
+            interaction: discord.Interaction,
+            collection: str | None = None
+    ):
+        await interaction.response.defer()
+
+        collection_id = None
+        collection_name = None
+
+        #
+        # If a collection was specified, find it.
+        #
+
+        if collection is not None:
+
+            found_collection = await self.bot.collection_repository.find_by_name(
+                collection
+            )
+
+            if found_collection is None:
+                embed = EmbedFactory.create(
+                    title="📚 Collection Not Found",
+                    description=(
+                        f"No collection named **{collection}** was found."
+                    ),
+                    colour=Colours.WARNING
+                )
+
+                await interaction.followup.send(
+                    embed=embed
+                )
+
+                return
+
+            collection_id = found_collection.id
+            collection_name = found_collection.name
+
+        #
+        # Create the View.
+        #
+
+        view = PlayerPagesView(
+            bot=self.bot,
+            user=interaction.user,
+            collection_id=collection_id,
+            collection_name=collection_name
+        )
+
+        await view.load_page()
+
+        #
+        # No pages in the selected collection.
+        #
+
+        if view.total_pages == 0:
+
+            if collection_name is not None:
+
+                description = (
+                    f"You don't have any pages from "
+                    f"**{collection_name}** yet."
+                )
+
+            else:
+
+                description = (
+                    "You don't have any pages in your personal book yet.\n\n"
+                    "Use **/roll** to start collecting pages!"
+                )
+
+            embed = EmbedFactory.create(
+                title="📖 Your Pages",
+                description=description,
+                colour=Colours.INFO
+            )
+
+            embed.set_thumbnail(
+                url=interaction.user.display_avatar.url
+            )
+
+            await interaction.followup.send(
+                embed=embed
+            )
+
+            return
+
+        await interaction.followup.send(
+            embed=view.build_embed(),
+            view=view
+        )
+
+    @player.command(
+        name="gallery",
+        description="Browse all pages currently in your collection."
+    )
+    async def gallery(
             self,
             interaction: discord.Interaction
     ):
         await interaction.response.defer()
 
-        view = PlayerPagesView(
-            bot=self.bot,
-            user=interaction.user
+        entries, total = await self.bot.player_service.get_player_gallery_entries(
+            interaction.user,
+            limit=1,
+            offset=0
         )
 
-        await view.load_page()
+        if total == 0:
+            embed = EmbedFactory.create(
+                title="📚 Your Gallery",
+                description=(
+                    "You don't have any pages in your collection yet.\n\n"
+                    "Use **/roll** to discover and collect your first page!"
+                ),
+                colour=Colours.INFO
+            )
+
+            embed.set_thumbnail(
+                url=interaction.user.display_avatar.url
+            )
+
+            await interaction.followup.send(
+                embed=embed
+            )
+
+            return
+
+        view = PlayerGalleryView(
+            bot=self.bot,
+            player=interaction.user,
+            total=total,
+            entry=entries[0]
+        )
 
         await interaction.followup.send(
-            embed=view.build_embed(),
+            embed=await view.build_embed(),
             view=view
         )
 

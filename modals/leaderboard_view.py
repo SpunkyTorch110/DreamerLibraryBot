@@ -20,12 +20,22 @@ class LeaderboardView(discord.ui.View):
 
     def build_embed(self):
 
-        medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
+        medals = [
+            "🥇",
+            "🥈",
+            "🥉",
+            "4️⃣",
+            "5️⃣",
+            "6️⃣",
+            "7️⃣",
+            "8️⃣"
+        ]
 
         titles = {
             "pages": "📚 Leaderboard for Most Pages",
             "claims": "👑 Leaderboard for First Claims",
-            "gold": "💰 Leaderboard for Richest Players"
+            "gold": "💰 Leaderboard for Richest Players",
+            "completion": "🏆 Leaderboard for Completionists"
         }
 
         descriptions = {
@@ -40,13 +50,18 @@ class LeaderboardView(discord.ui.View):
             "gold": (
                 "The wealthiest collectors ranked by the amount of GP "
                 "currently in their possession."
+            ),
+            "completion": (
+                "The players who have collected the highest percentage of "
+                "unique pages available in the DREAMER Library."
             )
         }
 
         suffixes = {
             "pages": "",
             "claims": "",
-            "gold": " GP"
+            "gold": " GP",
+            "completion": "%"
         }
 
         entries = self.boards[self.current]
@@ -54,9 +69,14 @@ class LeaderboardView(discord.ui.View):
         lines = []
 
         for medal, entry in zip(medals, entries):
+
+            if self.current == "completion":
+                value = f"{entry.value:.1f}%"
+            else:
+                value = f"{entry.value:,}{suffixes[self.current]}"
+
             lines.append(
-                f"{medal} **{entry.username}** — "
-                f"{entry.value:,}{suffixes[self.current]}"
+                f"{medal} **{entry.username}** — {value}"
             )
 
         embed = EmbedFactory.create(
@@ -74,7 +94,7 @@ class LeaderboardView(discord.ui.View):
             )
 
         embed.set_footer(
-            text="Top 5 Players"
+            text="Top 8 Players"
         )
 
         return embed
@@ -96,6 +116,11 @@ class LeaderboardView(discord.ui.View):
                 label="Richest Players",
                 emoji="💰",
                 value="gold"
+            ),
+            discord.SelectOption(
+                label="Completionists",
+                emoji="🏆",
+                value="completion"
             )
         ]
     )

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from dotenv import load_dotenv
 import os
 
@@ -25,25 +27,19 @@ BOT_CREATOR = os.getenv("BOT_CREATOR")
 DISCORD_STATUS = "v1.0 | Use /roll to start"
 
 # amount of players shown in the leaderboard
-MAX_LEADERBOARD_PLAYERS = 5
+MAX_LEADERBOARD_PLAYERS = 8
 
 # amount of pages that appear per page in the list
 MAX_PAGES_PER_PAGE = 20
 
 # amount of collections shown in a single page of collections listing
-COLLECTION_PAGE_SIZE = 10
+COLLECTION_PAGE_SIZE = 6
 
 # amount of pages to skip in gallery viewing
 GALLERY_JUMP_SIZE = 5
 
-# time in hours for a single roll recharge to be added
-ROLL_RECHARGE = 4
-
 # max amount of rolls a player can have
 MAX_ROLLS = 6
-
-# time in hours for a single claim recharge to be added
-CLAIM_RECHARGE = 12
 
 # max amount of claims a player can have
 MAX_CLAIMS = 2
@@ -62,6 +58,20 @@ ROLL_SELL_VALUES = {
 }
 
 # drop chances to get the rarities while rolling
-SINGLE_STAR_DROP_CHANCE = 50
-DOUBLE_STAR_DROP_CHANCE = 35
+SINGLE_STAR_DROP_CHANCE = 55
+DOUBLE_STAR_DROP_CHANCE = 30
 TRIPLE_STAR_DROP_CHANCE = 15
+
+# amount of time for a roll and claim to recharge with and without an upgrade
+
+ROLL_RECHARGE = timedelta(hours=4)
+ROLL_RECHARGE_UPGRADED = timedelta(hours=3)
+
+CLAIM_RECHARGE = timedelta(hours=12)
+CLAIM_RECHARGE_UPGRADED = timedelta(hours=10)
+
+
+# shop cost for the roll and claim upgrade
+
+ROLL_UPGRADE_COST = 100
+CLAIM_UPGRADE_COST = 100

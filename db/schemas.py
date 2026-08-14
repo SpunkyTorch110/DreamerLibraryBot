@@ -130,6 +130,19 @@ CREATE TABLE IF NOT EXISTS inventory
     FOREIGN KEY(page_id) REFERENCES pages(id) ON DELETE CASCADE
 );"""
 
+UPGRADE_TABLE = """
+CREATE TABLE IF NOT EXISTS upgrades (
+    player_id INTEGER PRIMARY KEY,
+
+    roll_upgraded INTEGER NOT NULL DEFAULT 0,
+    claim_upgraded INTEGER NOT NULL DEFAULT 0,
+
+    FOREIGN KEY (player_id)
+        REFERENCES players(discord_id)
+        ON DELETE CASCADE
+);
+"""
+
 TABLES = [
     SCHEMA_VERSION_TABLE,
     PLAYERS_TABLE,
@@ -137,7 +150,8 @@ TABLES = [
     PAGES_TABLE,
     PAGE_IMAGES_TABLE,
     PAGE_ALIASES_TABLE,
-    INVENTORY_TABLE
+    INVENTORY_TABLE,
+    UPGRADE_TABLE,
 ]
 
 INDEXES = [
