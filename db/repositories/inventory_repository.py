@@ -320,3 +320,22 @@ class InventoryRepository(BaseRepository):
 
         return row[0]
 
+    async def count_player_owned_pages(
+            self,
+            player_id: int,
+            tx=None
+    ) -> int:
+        row = await self.fetch_one(
+            """
+            SELECT COUNT(DISTINCT page_id) AS total
+            FROM inventory
+            WHERE player_id = ?
+              AND amount > 0
+            """,
+            (
+                player_id,
+            ),
+            tx
+        )
+
+        return row["total"] if row else 0

@@ -17,8 +17,6 @@ from services.library_service import LibraryService
 from services.page_service import PageService
 from services.player_service import PlayerService
 from services.roll_service import RollService
-from services.upgrade_service import UpgradeService
-
 
 class DreamerLibraryBot(commands.Bot):
     database: Database
@@ -36,7 +34,6 @@ class DreamerLibraryBot(commands.Bot):
     player_service: PlayerService
     library_service: LibraryService
     roll_service: RollService
-    upgrade_service: UpgradeService
 
     def __init__(self):
 
@@ -87,7 +84,6 @@ class DreamerLibraryBot(commands.Bot):
             collection_repository=self.collection_repository,
             page_image_repository=self.page_image_repository,
             upgrade_repository=self.upgrade_repository,
-            upgrade_service=self.upgrade_service,
         )
         self.library_service = LibraryService(
             database=self.database,
@@ -105,12 +101,6 @@ class DreamerLibraryBot(commands.Bot):
             page_image_repository=self.page_image_repository,
             inventory_repository=self.inventory_repository,
         )
-        self.upgrade_service = UpgradeService(
-            database=self.database,
-            player_service=self.player_service,
-            player_repository=self.player_repository,
-            upgrade_repository=self.upgrade_repository,
-        )
 
         await self.load_extension("cogs.ping")
         await self.load_extension("cogs.admin")
@@ -120,6 +110,8 @@ class DreamerLibraryBot(commands.Bot):
         await self.load_extension("cogs.roll")
         await self.load_extension("cogs.help")
         await self.load_extension("cogs.bot")
+        await self.load_extension("cogs.shop")
+        await self.load_extension("cogs.patch_notes")
 
         print("Syncing slash commands...")
         await self.tree.sync()

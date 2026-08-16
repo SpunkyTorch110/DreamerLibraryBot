@@ -137,6 +137,9 @@ CREATE TABLE IF NOT EXISTS upgrades (
     roll_upgraded INTEGER NOT NULL DEFAULT 0,
     claim_upgraded INTEGER NOT NULL DEFAULT 0,
 
+    roll_capacity_upgraded INTEGER NOT NULL DEFAULT 0,
+    claim_capacity_upgraded INTEGER NOT NULL DEFAULT 0,
+
     FOREIGN KEY (player_id)
         REFERENCES players(discord_id)
         ON DELETE CASCADE

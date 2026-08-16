@@ -912,3 +912,19 @@ class PageRepository(BaseRepository):
             )
             for row in rows
         ]
+
+    async def count_library_pages(
+            self,
+            tx=None
+    ) -> int:
+
+        row = await self.fetch_one(
+            """
+            SELECT COUNT(*) AS total
+            FROM pages
+            """,
+            (),
+            tx
+        )
+
+        return row["total"] if row else 0

@@ -21,7 +21,7 @@ class BotCog(commands.Cog):
             interaction: discord.Interaction
     ):
         embed = EmbedFactory.create(
-            title="📖 Welcome to DREAMER Library v1.0",
+            title="📖 Welcome to DREAMER Library v1.1",
             description=(
                 f"This bot was developed by {config.BOT_CREATOR} to let players collect, "
                 "trade, and discover pages from my **D&D universe and stories**.\n\n"
@@ -59,7 +59,7 @@ class BotCog(commands.Cog):
             )
 
         embed.set_footer(
-            text="DREAMER Library • Version 1.0"
+            text="DREAMER Library • Version 1.1"
         )
 
         await interaction.response.send_message(

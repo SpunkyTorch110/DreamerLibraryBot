@@ -99,6 +99,22 @@ class HelpView(discord.ui.View):
                     inline=False
                 )
 
+                embed.add_field(
+                    name="(NEW) /shop",
+                    value=(
+                        "Opens a shop to buy Rolls and Claims with GP "
+                    ),
+                    inline=False
+                )
+
+                embed.add_field(
+                    name="(NEW) /patchnotes",
+                    value=(
+                        "Shows the Patch Notes of the current version."
+                    ),
+                    inline=False
+                )
+
             #
             # Library
             #
@@ -210,6 +226,18 @@ class HelpView(discord.ui.View):
                 embed.add_field(
                     name="(NEW) /player gallery",
                     value="Browse every page one by one in your gallery.",
+                    inline=False
+                )
+
+                embed.add_field(
+                    name="(NEW) /player upgrade",
+                    value="Buy a permanent upgrade for your account.",
+                    inline=False
+                )
+
+                embed.add_field(
+                    name="(NEW) /player completionism",
+                    value="Unlock Chapters of the Book of Fate according with your Completionism Percentage.",
                     inline=False
                 )
 

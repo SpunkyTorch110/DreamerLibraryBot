@@ -24,7 +24,7 @@ DATABASE = "data/dreamerlibrarybot.db"
 BOT_CREATOR = os.getenv("BOT_CREATOR")
 
 # status on the discord bot
-DISCORD_STATUS = "v1.0 | Use /roll to start"
+DISCORD_STATUS = "v1.1 | Use /roll to start"
 
 # amount of players shown in the leaderboard
 MAX_LEADERBOARD_PLAYERS = 8
@@ -37,12 +37,6 @@ COLLECTION_PAGE_SIZE = 6
 
 # amount of pages to skip in gallery viewing
 GALLERY_JUMP_SIZE = 5
-
-# max amount of rolls a player can have
-MAX_ROLLS = 6
-
-# max amount of claims a player can have
-MAX_CLAIMS = 2
 
 # amount of rolls the player starts with initially
 STARTING_ROLLS = 3
@@ -70,8 +64,35 @@ ROLL_RECHARGE_UPGRADED = timedelta(hours=3)
 CLAIM_RECHARGE = timedelta(hours=12)
 CLAIM_RECHARGE_UPGRADED = timedelta(hours=10)
 
+# max amount of rolls and claims with and without an upgrade
+
+MAX_ROLLS = 6
+MAX_CLAIMS = 2
+
+MAX_ROLLS_UPGRADED = 9
+MAX_CLAIMS_UPGRADED = 3
 
 # shop cost for the roll and claim upgrade
 
 ROLL_UPGRADE_COST = 100
 CLAIM_UPGRADE_COST = 100
+
+ROLL_CAPACITY_UPGRADE_COST = 50
+CLAIM_CAPACITY_UPGRADE_COST = 50
+
+# shop prices
+
+ROLL_SHOP_PRICE = 30
+CLAIM_SHOP_PRICE = 60
+
+# completionism messages for each level
+COMPLETIONISM_QUOTES = {
+    1: os.getenv("COMPLETIONISM_QUOTE_1", ""),
+    2: os.getenv("COMPLETIONISM_QUOTE_2", ""),
+    3: os.getenv("COMPLETIONISM_QUOTE_3", ""),
+    4: os.getenv("COMPLETIONISM_QUOTE_4", ""),
+    5: os.getenv("COMPLETIONISM_QUOTE_5", ""),
+    6: os.getenv("COMPLETIONISM_QUOTE_6", ""),
+    7: os.getenv("COMPLETIONISM_QUOTE_7", ""),
+    8: os.getenv("COMPLETIONISM_QUOTE_8", ""),
+}

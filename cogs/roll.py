@@ -31,11 +31,12 @@ class Roll(commands.Cog):
             result=result
         )
 
-        await interaction.followup.send(
+        message = await interaction.followup.send(
             embed=await view.build_embed(),
             view=view
         )
 
+        view.message = message
 
 async def setup(bot):
     await bot.add_cog(

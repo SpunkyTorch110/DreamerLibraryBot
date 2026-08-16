@@ -8,10 +8,23 @@ class UpgradeRepository(BaseRepository):
     def _map(row) -> PlayerUpgrades:
         return PlayerUpgrades(
             player_id=row["player_id"],
-            roll_upgraded=bool(row["roll_upgraded"]),
-            claim_upgraded=bool(row["claim_upgraded"])
-        )
 
+            roll_upgraded=bool(
+                row["roll_upgraded"]
+            ),
+
+            claim_upgraded=bool(
+                row["claim_upgraded"]
+            ),
+
+            roll_capacity_upgraded=bool(
+                row["roll_capacity_upgraded"]
+            ),
+
+            claim_capacity_upgraded=bool(
+                row["claim_capacity_upgraded"]
+            )
+        )
     async def get(
             self,
             player_id: int,
@@ -23,7 +36,9 @@ class UpgradeRepository(BaseRepository):
             SELECT
                 player_id,
                 roll_upgraded,
-                claim_upgraded
+                claim_upgraded,
+                roll_capacity_upgraded,
+                claim_capacity_upgraded
             FROM upgrades
             WHERE player_id = ?
             """,
@@ -48,14 +63,20 @@ class UpgradeRepository(BaseRepository):
             INSERT INTO upgrades (
                 player_id,
                 roll_upgraded,
-                claim_upgraded
+                claim_upgraded,
+                roll_capacity_upgraded,
+                claim_capacity_upgraded
             )
-            VALUES (?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 upgrades.player_id,
+
                 int(upgrades.roll_upgraded),
-                int(upgrades.claim_upgraded)
+                int(upgrades.claim_upgraded),
+
+                int(upgrades.roll_capacity_upgraded),
+                int(upgrades.claim_capacity_upgraded)
             ),
             tx
         )
@@ -93,6 +114,46 @@ class UpgradeRepository(BaseRepository):
             SET claim_upgraded = 1
             WHERE player_id = ?
               AND claim_upgraded = 0
+            """,
+            (
+                player_id,
+            ),
+            tx
+        )
+
+        return result.rowcount > 0
+
+    async def upgrade_roll_capacity(
+            self,
+            player_id: int,
+            tx=None
+    ) -> bool:
+        result = await self.execute(
+            """
+            UPDATE upgrades
+            SET roll_capacity_upgraded = 1
+            WHERE player_id = ?
+              AND roll_capacity_upgraded = 0
+            """,
+            (
+                player_id,
+            ),
+            tx
+        )
+
+        return result.rowcount > 0
+
+    async def upgrade_claim_capacity(
+            self,
+            player_id: int,
+            tx=None
+    ) -> bool:
+        result = await self.execute(
+            """
+            UPDATE upgrades
+            SET claim_capacity_upgraded = 1
+            WHERE player_id = ?
+              AND claim_capacity_upgraded = 0
             """,
             (
                 player_id,
@@ -141,3 +202,45 @@ class UpgradeRepository(BaseRepository):
         )
 
         return row is not None and bool(row["claim_upgraded"])
+
+    async def has_roll_capacity_upgrade(
+            self,
+            player_id: int,
+            tx=None
+    ) -> bool:
+        row = await self.fetch_one(
+            """
+            SELECT roll_capacity_upgraded
+            FROM upgrades
+            WHERE player_id = ?
+            """,
+            (
+                player_id,
+            ),
+            tx
+        )
+
+        return row is not None and bool(
+            row["roll_capacity_upgraded"]
+        )
+
+    async def has_claim_capacity_upgrade(
+            self,
+            player_id: int,
+            tx=None
+    ) -> bool:
+        row = await self.fetch_one(
+            """
+            SELECT claim_capacity_upgraded
+            FROM upgrades
+            WHERE player_id = ?
+            """,
+            (
+                player_id,
+            ),
+            tx
+        )
+
+        return row is not None and bool(
+            row["claim_capacity_upgraded"]
+        )

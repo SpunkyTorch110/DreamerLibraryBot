@@ -1,0 +1,2 @@
+class ResourceAtMax(Exception):
+    pass

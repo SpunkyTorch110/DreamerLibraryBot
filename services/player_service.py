@@ -1,8 +1,12 @@
 from datetime import datetime, timedelta
 
 import discord
+from discord import User, Member
 
 import config
+from exceptions.insufficient_gold import InsufficientGold
+from exceptions.resource_at_max import ResourceAtMax
+from exceptions.upgrade_already_purchased import UpgradeAlreadyPurchased
 from models.page_view import PageView
 from models.player_collection_progress import PlayerCollectionProgress
 from models.player_gallery_page_view import PlayerGalleryPageView
@@ -15,7 +19,7 @@ from models.schema.player_upgrades import PlayerUpgrades
 class PlayerService:
 
     def __init__(self, bot, database, player_repository, inventory_repository, page_repository, collection_repository, page_image_repository,
-                 upgrade_repository, upgrade_service):
+                 upgrade_repository):
         self.bot = bot
         self.database = database
         self.player_repository = player_repository
@@ -24,7 +28,6 @@ class PlayerService:
         self.collection_repository = collection_repository
         self.page_image_repository = page_image_repository
         self.upgrade_repository = upgrade_repository
-        self.upgrade_service = upgrade_service
 
 
     async def get_discord_user(
@@ -56,7 +59,7 @@ class PlayerService:
     ) -> Player:
 
         #
-        # Check if player already exists
+        # Get existing player
         #
 
         player = await self.player_repository.get(
@@ -77,8 +80,8 @@ class PlayerService:
 
                 gold=0,
 
-                rolls_remaining=3,
-                claims_remaining=1,
+                rolls_remaining=config.MAX_ROLLS,
+                claims_remaining=config.MAX_CLAIMS,
 
                 next_roll_at=None,
                 next_claim_at=None,
@@ -92,10 +95,10 @@ class PlayerService:
             )
 
         #
-        # Make sure the player has an upgrades record.
+        # Make sure the player has an upgrade record.
         #
-        # This is important because players may have existed
-        # before the upgrades system was introduced.
+        # This also handles players created before the
+        # upgrade system existed.
         #
 
         upgrades = await self.upgrade_repository.get(
@@ -109,7 +112,10 @@ class PlayerService:
                     player_id=player.discord_id,
 
                     roll_upgraded=False,
-                    claim_upgraded=False
+                    claim_upgraded=False,
+
+                    roll_capacity_upgraded=False,
+                    claim_capacity_upgraded=False
                 ),
                 connection
             )
@@ -127,11 +133,25 @@ class PlayerService:
         updated = False
 
         #
+        # Get the player's current capacities.
+        #
+
+        max_rolls = await self.get_max_rolls(
+            player.discord_id,
+            connection
+        )
+
+        max_claims = await self.get_max_claims(
+            player.discord_id,
+            connection
+        )
+
+        #
         # Rolls
         #
 
         while (
-                player.rolls_remaining < config.MAX_ROLLS
+                player.rolls_remaining < max_rolls
                 and player.next_roll_at is not None
                 and player.next_roll_at <= now
         ):
@@ -139,8 +159,16 @@ class PlayerService:
             player.rolls_remaining += 1
             updated = True
 
-            if player.rolls_remaining == config.MAX_ROLLS:
+            #
+            # Stop the timer when the player reaches
+            # their current maximum capacity.
+            #
+
+            if player.rolls_remaining >= max_rolls:
+
+                player.rolls_remaining = max_rolls
                 player.next_roll_at = None
+
             else:
 
                 recharge = await self.get_roll_recharge(
@@ -155,7 +183,7 @@ class PlayerService:
         #
 
         while (
-                player.claims_remaining < config.MAX_CLAIMS
+                player.claims_remaining < max_claims
                 and player.next_claim_at is not None
                 and player.next_claim_at <= now
         ):
@@ -163,8 +191,16 @@ class PlayerService:
             player.claims_remaining += 1
             updated = True
 
-            if player.claims_remaining == config.MAX_CLAIMS:
+            #
+            # Stop the timer when the player reaches
+            # their current maximum capacity.
+            #
+
+            if player.claims_remaining >= max_claims:
+
+                player.claims_remaining = max_claims
                 player.next_claim_at = None
+
             else:
 
                 recharge = await self.get_claim_recharge(
@@ -173,6 +209,10 @@ class PlayerService:
                 )
 
                 player.next_claim_at += recharge
+
+        #
+        # Save only if something changed.
+        #
 
         if updated:
             await self.player_repository.update(
@@ -556,22 +596,393 @@ class PlayerService:
 
         return roll_recharge, claim_recharge
 
+    async def purchase_upgrade(
+            self,
+            discord_user: User | Member,
+            upgrade: str
+    ) -> tuple[int, int]:
+
+        async with self.database.transaction() as connection:
+
+            #
+            # Get or create player.
+            #
+
+            player = await self.get_or_create_player(
+                discord_user,
+                connection
+            )
+
+            #
+            # Refresh player first so we have the latest state.
+            #
+
+            await self.refresh_player(
+                player,
+                connection
+            )
+
+            #
+            # Get current upgrades.
+            #
+
+            upgrades = await self.upgrade_repository.get(
+                player.discord_id,
+                connection
+            )
+
+            if upgrades is None:
+                raise RuntimeError(
+                    "Player upgrades not found."
+                )
+
+            #
+            # Determine upgrade cost and whether it has
+            # already been purchased.
+            #
+
+            if upgrade == "roll":
+
+                if upgrades.roll_upgraded:
+                    raise UpgradeAlreadyPurchased()
+
+                cost = config.ROLL_UPGRADE_COST
+
+            elif upgrade == "claim":
+
+                if upgrades.claim_upgraded:
+                    raise UpgradeAlreadyPurchased()
+
+                cost = config.CLAIM_UPGRADE_COST
+
+            elif upgrade == "roll_capacity":
+
+                if upgrades.roll_capacity_upgraded:
+                    raise UpgradeAlreadyPurchased()
+
+                cost = config.ROLL_CAPACITY_UPGRADE_COST
+
+            elif upgrade == "claim_capacity":
+
+                if upgrades.claim_capacity_upgraded:
+                    raise UpgradeAlreadyPurchased()
+
+                cost = config.CLAIM_CAPACITY_UPGRADE_COST
+
+            else:
+
+                raise ValueError(
+                    f"Unknown upgrade: {upgrade}"
+                )
+
+            #
+            # Check GP.
+            #
+
+            if player.gold < cost:
+                raise InsufficientGold()
+
+            #
+            # Deduct GP.
+            #
+
+            player.gold -= cost
+
+            #
+            # Activate upgrade.
+            #
+
+            if upgrade == "roll":
+
+                success = await self.upgrade_repository.upgrade_roll(
+                    player.discord_id,
+                    connection
+                )
+
+            elif upgrade == "claim":
+
+                success = await self.upgrade_repository.upgrade_claim(
+                    player.discord_id,
+                    connection
+                )
+
+            elif upgrade == "roll_capacity":
+
+                success = await self.upgrade_repository.upgrade_roll_capacity(
+                    player.discord_id,
+                    connection
+                )
+
+            else:
+
+                success = await self.upgrade_repository.upgrade_claim_capacity(
+                    player.discord_id,
+                    connection
+                )
+
+            #
+            # Prevent paying if the database refused the upgrade.
+            #
+
+            if not success:
+                raise UpgradeAlreadyPurchased()
+
+            #
+            # If capacity was upgraded while the player was
+            # already at the previous maximum, start a new timer.
+            #
+
+            if upgrade == "roll_capacity":
+
+                if player.next_roll_at is None:
+                    recharge = await self.get_roll_recharge(
+                        player.discord_id,
+                        connection
+                    )
+
+                    player.next_roll_at = (
+                            datetime.now() + recharge
+                    )
+
+            elif upgrade == "claim_capacity":
+
+                if player.next_claim_at is None:
+                    recharge = await self.get_claim_recharge(
+                        player.discord_id,
+                        connection
+                    )
+
+                    player.next_claim_at = (
+                            datetime.now() + recharge
+                    )
+
+            #
+            # Save player GP and potentially new timer.
+            #
+
+            await self.player_repository.update(
+                player,
+                connection
+            )
+
+            return cost, player.gold
+
     async def get_roll_recharge(
             self,
             player_id: int,
             connection=None
-    ):
-        return await self.upgrade_service.get_roll_recharge(
+    ) -> timedelta:
+
+        upgrades = await self.upgrade_repository.get(
             player_id,
             connection
         )
+
+        if upgrades is not None and upgrades.roll_upgraded:
+            return config.ROLL_RECHARGE_UPGRADED
+
+        return config.ROLL_RECHARGE
 
     async def get_claim_recharge(
             self,
             player_id: int,
             connection=None
-    ):
-        return await self.upgrade_service.get_claim_recharge(
+    ) -> timedelta:
+
+        upgrades = await self.upgrade_repository.get(
             player_id,
             connection
         )
+
+        if upgrades is not None and upgrades.claim_upgraded:
+            return config.CLAIM_RECHARGE_UPGRADED
+
+        return config.CLAIM_RECHARGE
+
+    async def get_max_rolls(
+            self,
+            player_id: int,
+            connection=None
+    ) -> int:
+
+        upgrades = await self.upgrade_repository.get(
+            player_id,
+            connection
+        )
+
+        if upgrades is not None and upgrades.roll_capacity_upgraded:
+            return config.MAX_ROLLS_UPGRADED
+
+        return config.MAX_ROLLS
+
+    async def get_max_claims(
+            self,
+            player_id: int,
+            connection=None
+    ) -> int:
+
+        upgrades = await self.upgrade_repository.get(
+            player_id,
+            connection
+        )
+
+        if upgrades is not None and upgrades.claim_capacity_upgraded:
+            return config.MAX_CLAIMS_UPGRADED
+
+        return config.MAX_CLAIMS
+
+    async def buy_roll(
+            self,
+            discord_user: User | Member
+    ) -> tuple[int, int]:
+
+        async with self.database.transaction() as connection:
+
+            player = await self.get_or_create_player(
+                discord_user,
+                connection
+            )
+
+            await self.refresh_player(
+                player,
+                connection
+            )
+
+            max_rolls = await self.get_max_rolls(
+                player.discord_id,
+                connection
+            )
+
+            if player.rolls_remaining >= max_rolls:
+                raise ResourceAtMax()
+
+            cost = config.ROLL_SHOP_PRICE
+
+            if player.gold < cost:
+                raise InsufficientGold()
+
+            player.gold -= cost
+            player.rolls_remaining += 1
+
+            #
+            # If the player is now at maximum capacity,
+            # there is no reason to keep a recharge timer.
+            #
+
+            if player.rolls_remaining >= max_rolls:
+                player.rolls_remaining = max_rolls
+                player.next_roll_at = None
+
+            #
+            # If there is no active timer, start one.
+            #
+
+            elif player.next_roll_at is None:
+
+                recharge = await self.get_roll_recharge(
+                    player.discord_id,
+                    connection
+                )
+
+                player.next_roll_at = datetime.now() + recharge
+
+            await self.player_repository.update(
+                player,
+                connection
+            )
+
+            return cost, player.gold
+
+    async def buy_claim(
+            self,
+            discord_user: User | Member
+    ) -> tuple[int, int]:
+
+        async with self.database.transaction() as connection:
+
+            player = await self.get_or_create_player(
+                discord_user,
+                connection
+            )
+
+            await self.refresh_player(
+                player,
+                connection
+            )
+
+            max_claims = await self.get_max_claims(
+                player.discord_id,
+                connection
+            )
+
+            if player.claims_remaining >= max_claims:
+                raise ResourceAtMax()
+
+            cost = config.CLAIM_SHOP_PRICE
+
+            if player.gold < cost:
+                raise InsufficientGold()
+
+            player.gold -= cost
+            player.claims_remaining += 1
+
+            if player.claims_remaining >= max_claims:
+                player.claims_remaining = max_claims
+                player.next_claim_at = None
+
+            elif player.next_claim_at is None:
+
+                recharge = await self.get_claim_recharge(
+                    player.discord_id,
+                    connection
+                )
+
+                player.next_claim_at = datetime.now() + recharge
+
+            await self.player_repository.update(
+                player,
+                connection
+            )
+
+            return cost, player.gold
+
+    async def get_completion_percentage(
+            self,
+            discord_user: discord.User | discord.Member
+    ) -> float:
+
+        async with self.database.transaction() as connection:
+            #
+            # Make sure the player exists.
+            #
+
+            player = await self.get_or_create_player(
+                discord_user,
+                connection
+            )
+
+            #
+            # Total number of pages in the library.
+            #
+
+            total_pages = await self.page_repository.count_library_pages(
+                connection
+            )
+
+            #
+            # Number of different pages owned by the player.
+            #
+
+            owned_pages = await self.inventory_repository.count_player_owned_pages(
+                player.discord_id,
+                connection
+            )
+
+            #
+            # Avoid division by zero.
+            #
+
+            if total_pages == 0:
+                return 0.0
+
+            return (owned_pages / total_pages) * 100
