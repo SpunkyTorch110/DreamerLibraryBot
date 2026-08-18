@@ -24,6 +24,8 @@ class PlayerGalleryView(discord.ui.View):
 
         self.entry = entry
 
+        self.message: discord.Message | None = None
+
         self.update_buttons()
 
     async def load_current_entry(self):

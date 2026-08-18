@@ -59,6 +59,11 @@ class RollView(discord.ui.View):
             self.result.page.id
         )
 
+        owned_amount = await self.bot.inventory_repository.get_amount(
+            self.result.player.discord_id,
+            page.id
+        )
+
         return create_page_embed(
             page=page,
             collect=self.result.collection,
@@ -67,7 +72,8 @@ class RollView(discord.ui.View):
             original_owner=await self.bot.player_service.get_discord_user(
                 page.owner_id
             ),
-            hide_stats=page.owner_id is None
+            hide_stats=page.owner_id is None,
+            owned_amount=owned_amount
         )
 
     @discord.ui.button(
@@ -122,6 +128,14 @@ class RollView(discord.ui.View):
         )
 
         #
+        # Get updated completionism percentage.
+        #
+
+        completion = await self.bot.player_service.get_completion_percentage(
+            interaction.user
+        )
+
+        #
         # Announce the claim.
         #
 
@@ -132,7 +146,8 @@ class RollView(discord.ui.View):
             ),
             description=(
                 f"**{self.result.page.name}** has been added to "
-                f"{interaction.user.display_name}'s library."
+                f"{interaction.user.display_name}'s library.\n\n"
+                f"📖 **Completionism:** `{completion:.1f}%`"
             ),
             colour=Colours.SUCCESS
         )

@@ -406,10 +406,13 @@ class Player(commands.Cog):
             entry=entries[0]
         )
 
-        await interaction.followup.send(
+        message = await interaction.followup.send(
             embed=await view.build_embed(),
-            view=view
+            view=view,
+            wait=True
         )
+
+        view.message = message
 
     @player.command(
         name="upgrade",

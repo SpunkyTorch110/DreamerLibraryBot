@@ -379,6 +379,7 @@ class PlayerRepository(BaseRepository):
         rows = await self.fetch_all(
             """
             SELECT p.discord_id,
+                   p.display_name,
                    p.username,
 
                    COALESCE(
@@ -411,7 +412,7 @@ class PlayerRepository(BaseRepository):
         return [
             LeaderboardEntry(
                 discord_id=row["discord_id"],
-                username=row["username"],
+                username=row["display_name"],
                 value=row["completion_percentage"]
             )
             for row in rows

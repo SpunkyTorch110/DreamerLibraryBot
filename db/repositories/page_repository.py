@@ -642,7 +642,6 @@ class PageRepository(BaseRepository):
                 discovered=bool(row["discovered"]),
 
                 name=row["name"],
-
                 rarity=(
                     None
                     if row["rarity"] is None
@@ -651,10 +650,11 @@ class PageRepository(BaseRepository):
 
                 amount=row["amount"],
 
-                # This should mean "claimed by anyone"
-                claimed=row["owner_id"] is not None,
+                # Claimed means THIS PLAYER owns a copy.
+                claimed=row["amount"] > 0,
 
-                # This means "this player was the first claimant"
+                # Original owner means THIS PLAYER was the
+                # first person to claim the page.
                 original_owner=(
                         row["owner_id"] == owner_id
                 )
